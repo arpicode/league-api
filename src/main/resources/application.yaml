@@ -19,4 +19,4 @@ spring:
 
 logging:
   level:
-    '[com.leagueapi]': DEBUG
+    '[io.arpicode.leagueapi]': DEBUG
