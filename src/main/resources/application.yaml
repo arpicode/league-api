@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: league-api
+  output:
+    ansi:
+      enabled: ALWAYS
+  datasource:
+    url: jdbc:postgresql://localhost:5432/meeple_league
+    username: meeple_league
+    password: meeple_league_local
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    default-schema: league
+#  mvc:
+#    problemdetails:
+#      enabled: true
+
+logging:
+  level:
+    '[com.leagueapi]': DEBUG
