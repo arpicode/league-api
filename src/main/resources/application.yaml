@@ -11,6 +11,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
   flyway:
     default-schema: league
 #  mvc:
