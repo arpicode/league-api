@@ -1,0 +1,23 @@
+name: meeple-league
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: 'meeple_league'
+      POSTGRES_USER: 'meeple_league'
+      POSTGRES_PASSWORD: 'meeple_league_local'
+    ports:
+      - '5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U meeple_league -d meeple_league']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  db-data: {}
