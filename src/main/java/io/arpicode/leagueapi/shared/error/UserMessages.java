@@ -11,5 +11,6 @@ public final class UserMessages {
     public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
     public static final String CONFLICT = "The request conflicts with an existing resource.";
     public static final String VALIDATION_ERROR = "Request validation failed. See 'errors' for details.";
+    public static final String INTERNAL_ERROR = "An unexpected error occurred. Quote the errorId when reporting it.";
 
 }
