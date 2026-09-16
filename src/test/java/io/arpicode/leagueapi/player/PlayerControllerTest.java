@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -49,7 +50,25 @@ class PlayerControllerTest {
     }
 
     @Test
+    @DisplayName("should create a new normalized player when valid data is provided")
+    void createPlayerNormalized() throws Exception {
+        mockMvc.perform(post("/api/v1/players")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"  Test_User ","email":"  Test_User@Example.Com "}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(header().exists("Location"))
+                .andExpect(jsonPath("$.username").value("Test_User"))
+                .andExpect(jsonPath("$.email").value("test_user@example.com"))
+                .andExpect(jsonPath("$.createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+    }
+
+    @Test
     @DisplayName("should return 409 Conflict when trying to create a player with duplicate username")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = "DELETE FROM league.player WHERE username IN ('test_user', 'test_user_unique')", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void createPlayerWithDuplicateUsername() throws Exception {
         // First creation should succeed
         mockMvc.perform(post("/api/v1/players")
@@ -74,6 +93,8 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when trying to create a player with duplicate email")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = "DELETE FROM league.player WHERE username IN ('test_user', 'test_user_unique')", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void createPlayerWithDuplicateEmail() throws Exception {
         // First creation should succeed
         mockMvc.perform(post("/api/v1/players")
@@ -97,9 +118,36 @@ class PlayerControllerTest {
     }
 
     @Test
+    @DisplayName("should return 409 Conflict when trying to create a player with duplicate email (case insensitive)")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = "DELETE FROM league.player WHERE username IN ('test_user', 'test_user_unique')", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void createPlayerWithDuplicateEmailCaseInsensitive() throws Exception {
+        // First creation should succeed
+        mockMvc.perform(post("/api/v1/players")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"test_user","email":"test_user@example.com"}
+                                """))
+                .andExpect(status().isCreated());
+
+        // Second creation should fail with 409 Conflict due to duplicate email (case insensitive)
+        mockMvc.perform(post("/api/v1/players")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"test_user_unique","email":"TEST_USER@EXAMPLE.COM"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(header().doesNotExist("Location"))
+                .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
+    }
+
+    @Test
     @DisplayName("should return 400 Bad Request when trying to create a player with username that is too short")
     void createPlayerWithInvalidDataTooShortUsername() throws Exception {
-        mockMvc.perform(post("/api/v1/players").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/v1/players")
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"te","email":"test_user@example.com"}
                                 """))
@@ -146,8 +194,9 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a player with non valid email")
-    void createPlayerWithInvalidDataTooLongEmail() throws Exception {
-        mockMvc.perform(post("/api/v1/players").contentType(MediaType.APPLICATION_JSON)
+    void createPlayerWithInvalidDataNonValidEmail() throws Exception {
+        mockMvc.perform(post("/api/v1/players")
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"test_user","email":"test_user_at_example.com"}
                                 """))
@@ -174,6 +223,26 @@ class PlayerControllerTest {
     }
 
     @Test
+    @DisplayName("should return 400 Bad Request when the email is well-formed but longer than the column allows")
+    void createPlayerWithInvalidDataTooLongEmail() throws Exception {
+        // Well-formed but longer than 255 characters: 60 + 1 + (63 + 1) * 3 + 3 = 256
+        String longEmail = "a".repeat(60) + "@" + ("b".repeat(63) + ".").repeat(3) + "com";
+
+        mockMvc.perform(post("/api/v1/players")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"test_user","email":"%s"}
+                                """.formatted(longEmail)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+                .andExpect(jsonPath("$.errors.length()").value(1))
+                .andExpect(jsonPath("$.errors[0].field").value("email"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("Email must not exceed 255 characters"));
+    }
+
+    @Test
     @DisplayName("should return a list of all the players")
     void listAllPlayers() throws Exception {
         for (int i = 0; i < 3; i++) {
@@ -187,9 +256,13 @@ class PlayerControllerTest {
                     .andExpect(status().isCreated());
         }
 
+        // Asserting the usernames (not just the count) so that returning the wrong
+        // three rows fails; containsInAnyOrder also pins the size, and stays valid
+        // while findAll() is unordered.
         mockMvc.perform(get("/api/v1/players"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$[*].username",
+                        containsInAnyOrder("test_user_0", "test_user_1", "test_user_2")));
     }
 
     @Test
@@ -202,7 +275,6 @@ class PlayerControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(999)))
                 .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
-
 
     @Test
     @DisplayName("should update an existing player when valid data is provided")
@@ -278,7 +350,8 @@ class PlayerControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(id.intValue())));
+                .andExpect(jsonPath("$.detail")
+                        .value(UserMessages.PLAYER_NOT_FOUND.formatted(id.intValue())));
     }
 
     @Test

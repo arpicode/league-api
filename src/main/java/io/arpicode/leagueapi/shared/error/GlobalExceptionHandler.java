@@ -23,6 +23,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String TRACE_ID = "traceId";
     private static final String ERRORS = "errors";
 
+    // Each key in this map represents the name of a database constraint exactly as Postgres defines it.
+    // NOTE: migrations must be updated to ensure that the constraint names match the keys in this map.
     private static final Map<String, ConstraintMapping> CONSTRAINT_MAPPINGS = Map.of(
             "player_username_key", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
             "player_email_key", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS));
