@@ -2,6 +2,9 @@ package io.arpicode.leagueapi.player;
 
 import io.arpicode.leagueapi.player.dto.PlayerRequest;
 import io.arpicode.leagueapi.player.dto.PlayerResponse;
+import io.arpicode.leagueapi.shared.error.BusinessException;
+import io.arpicode.leagueapi.shared.error.ErrorCode;
+import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +38,9 @@ public class PlayerService {
     @Transactional(readOnly = true)
     public PlayerResponse getById(long id) {
         Player player = playerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
+                .orElseThrow(() ->  new BusinessException(
+                        ErrorCode.PLAYER_NOT_FOUND,
+                        UserMessages.PLAYER_NOT_FOUND.formatted(id)));
 
         return toPlayerResponse(player);
     }
@@ -43,10 +48,14 @@ public class PlayerService {
     @Transactional
     public PlayerResponse update(long id, PlayerRequest playerRequest) {
         Player player = playerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.PLAYER_NOT_FOUND,
+                        UserMessages.PLAYER_NOT_FOUND.formatted(id)));
 
         player.setUsername(playerRequest.username());
         player.setEmail(playerRequest.email());
+
+        playerRepository.saveAndFlush(player);
 
         return toPlayerResponse(player);
     }
@@ -54,7 +63,9 @@ public class PlayerService {
     @Transactional
     public void delete(long id) {
         Player player = playerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.PLAYER_NOT_FOUND,
+                        UserMessages.PLAYER_NOT_FOUND.formatted(id)));
 
         playerRepository.delete(player);
     }
