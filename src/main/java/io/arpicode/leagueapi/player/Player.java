@@ -16,24 +16,28 @@ public class Player {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    private Long id;
 
     @Setter
     @NonNull
-    @Column(name = "username", nullable = false, unique = true, length = 50)
-    String username;
+    @Column(name = "username", nullable = false, length = 50)
+    private String username;
 
     @Setter
     @NonNull
-    @Column(name = "email", nullable = false, unique = true)
-    String email;
+    @Column(name = "email", nullable = false)
+    private String email;
 
     @Column(name = "created_at", nullable = false)
     @Generated(event = EventType.INSERT)
-    OffsetDateTime createdAt;
+    private OffsetDateTime createdAt;
 
+    // Maintained entirely by the database: the trg_player_updated_at trigger (V004) sets
+    // the column, @Generated tells Hibernate to read the new value back, and that read only
+    // happens because update() calls saveAndFlush. Break any link in that chain and this
+    // field silently stops advancing.
     @Column(name = "updated_at", nullable = false)
     @Generated(event = {EventType.INSERT, EventType.UPDATE})
-    OffsetDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
 }
