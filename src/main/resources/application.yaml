@@ -17,9 +17,6 @@ spring:
     show-sql: true
   flyway:
     default-schema: league
-#  mvc:
-#    problemdetails:
-#      enabled: true
 
 logging:
   level:
