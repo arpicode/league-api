@@ -9,13 +9,13 @@ public record PlayerRequest(
         @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
         String username,
         @NotBlank(message = "Email cannot be blank")
-        @Email
+        @Email(message = "Email should be valid")
         String email
 ) {
 
-        public PlayerRequest {
-                username = username == null ? null : username.strip();
-                email = email == null ? null : email.strip();
-        }
+    public PlayerRequest {
+        username = username == null ? null : username.strip();
+        email = email == null ? null : email.strip();
+    }
 
 }

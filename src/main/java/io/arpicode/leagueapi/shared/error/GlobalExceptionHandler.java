@@ -1,13 +1,17 @@
 package io.arpicode.leagueapi.shared.error;
 
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
+import org.springframework.http.*;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -17,6 +21,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final String CODE = "code";
     private static final String TRACE_ID = "traceId";
+    private static final String ERRORS = "errors";
 
     private static final Map<String, ConstraintMapping> CONSTRAINT_MAPPINGS = Map.of(
             "player_username_key", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
@@ -25,7 +30,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private record ConstraintMapping(ErrorCode code, String message) {
     }
 
+    public record FieldViolation(String field, String message) {
+    }
 
+    //-- Business rules violations
     @ExceptionHandler(BusinessException.class)
     public ProblemDetail handleBusinessException(BusinessException ex) {
         ProblemDetail problem = problem(ex.getCode(), ex.getMessage());
@@ -34,6 +42,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
+    //-- Database constraint violations
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
         String constraintName = ex.getCause() instanceof org.hibernate.exception.ConstraintViolationException cve
@@ -44,15 +53,38 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (mapping != null) {
             ProblemDetail problem = problem(mapping.code(), mapping.message());
             log.debug("[{}] constraint {} violated", traceIdOf(problem), constraintName);
+
             return problem;
         }
 
         // Unmapped constraint in ConstraintMapping: the client receives a generic 409, the technical detail remains here.
         ProblemDetail problem = problem(ErrorCode.DATA_INTEGRITY_VIOLATION, UserMessages.CONFLICT);
         log.warn("[{}] unmapped data integrity violation (constraint={})", traceIdOf(problem), constraintName, ex);
+
         return problem;
     }
 
+    //-- Request validation errors (e.g. @Valid)
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex,
+            @NonNull HttpHeaders headers,
+            @NonNull HttpStatusCode status,
+            @NonNull WebRequest request) {
+        List<FieldViolation> violations = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> new FieldViolation(error.getField(), error.getDefaultMessage()))
+                .sorted(Comparator.comparing(FieldViolation::field)
+                        .thenComparing(FieldViolation::message, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+
+        ProblemDetail problem = problem(ErrorCode.VALIDATION_ERROR, UserMessages.VALIDATION_ERROR);
+        problem.setProperty(ERRORS, violations);
+        log.debug("[{}] validation failed: {}", traceIdOf(problem), violations);
+
+        return ResponseEntity.status(status).headers(headers).body(problem);
+    }
+
+    //-- Helper methods
 
     private static ProblemDetail problem(ErrorCode code, String detail) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(statusOf(code), detail);
@@ -72,6 +104,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return switch (code) {
             case PLAYER_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case USERNAME_ALREADY_EXISTS, EMAIL_ALREADY_EXISTS, DATA_INTEGRITY_VIOLATION -> HttpStatus.CONFLICT;
+            case VALIDATION_ERROR -> HttpStatus.BAD_REQUEST;
         };
     }
 

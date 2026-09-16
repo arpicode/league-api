@@ -97,6 +97,83 @@ class PlayerControllerTest {
     }
 
     @Test
+    @DisplayName("should return 400 Bad Request when trying to create a player with username that is too short")
+    void createPlayerWithInvalidDataTooShortUsername() throws Exception {
+        mockMvc.perform(post("/api/v1/players").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"te","email":"test_user@example.com"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+                .andExpect(jsonPath("$.errors[0].field").value("username"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("Username must be between 3 and 50 characters"));
+    }
+
+    @Test
+    @DisplayName("should return 400 Bad Request when trying to create a player with username that is too long")
+    void createPlayerWithInvalidDataTooLongUsername() throws Exception {
+        String longUsername = "t".repeat(51);
+        mockMvc.perform(post("/api/v1/players").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","email":"test_user@example.com"}
+                                """.formatted(longUsername)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+                .andExpect(jsonPath("$.errors[0].field").value("username"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("Username must be between 3 and 50 characters"));
+    }
+
+    @Test
+    @DisplayName("should return 400 Bad Request when trying to create a player with a blank username")
+    void createPlayerWithInvalidDataBlankUsername() throws Exception {
+        mockMvc.perform(post("/api/v1/players").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"","email":"test_user@example.com"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+                .andExpect(jsonPath("$.errors[0].field").value("username"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("Username cannot be blank"))
+                .andExpect(jsonPath("$.errors[1].message")
+                        .value("Username must be between 3 and 50 characters"));
+    }
+
+    @Test
+    @DisplayName("should return 400 Bad Request when trying to create a player with non valid email")
+    void createPlayerWithInvalidDataTooLongEmail() throws Exception {
+        mockMvc.perform(post("/api/v1/players").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"test_user","email":"test_user_at_example.com"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+                .andExpect(jsonPath("$.errors[0].field").value("email"))
+                .andExpect(jsonPath("$.errors[0].message").value("Email should be valid"));
+    }
+
+    @Test
+    @DisplayName("should return 400 Bad Request when trying to create a player with a blank email")
+    void createPlayerWithInvalidDataBlankEmail() throws Exception {
+        mockMvc.perform(post("/api/v1/players").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"test_user","email":""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+                .andExpect(jsonPath("$.errors[0].field").value("email"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("Email cannot be blank"));
+    }
+
+    @Test
     @DisplayName("should return a list of all the players")
     void listAllPlayers() throws Exception {
         for (int i = 0; i < 3; i++) {

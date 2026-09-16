@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 public class Player {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
     @Setter

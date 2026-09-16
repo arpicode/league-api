@@ -38,7 +38,7 @@ public class PlayerService {
     @Transactional(readOnly = true)
     public PlayerResponse getById(long id) {
         Player player = playerRepository.findById(id)
-                .orElseThrow(() ->  new BusinessException(
+                .orElseThrow(() -> new BusinessException(
                         ErrorCode.PLAYER_NOT_FOUND,
                         UserMessages.PLAYER_NOT_FOUND.formatted(id)));
 
