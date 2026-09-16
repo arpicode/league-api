@@ -5,10 +5,11 @@ import io.arpicode.leagueapi.player.dto.PlayerResponse;
 import io.arpicode.leagueapi.shared.error.BusinessException;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 
 @Service
 public class PlayerService {
@@ -28,11 +29,9 @@ public class PlayerService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlayerResponse> list() {
-        List<Player> players = playerRepository.findAll();
-        return players.stream()
-                .map(this::toPlayerResponse)
-                .toList();
+    public Page<PlayerResponse> list(Pageable pageable) {
+        return playerRepository.findAll(pageable)
+                .map(this::toPlayerResponse);
     }
 
     @Transactional(readOnly = true)

@@ -3,13 +3,15 @@ package io.arpicode.leagueapi.player;
 import io.arpicode.leagueapi.player.dto.PlayerRequest;
 import io.arpicode.leagueapi.player.dto.PlayerResponse;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/players")
@@ -37,9 +39,11 @@ public class PlayerController {
                 .body(saved);
     }
 
+    // PagedModel rather than Page: Page's JSON shape is explicitly not a stable contract
+    // in Spring Data, PagedModel's {content, page:{...}} envelope is.
     @GetMapping
-    public List<PlayerResponse> list() {
-        return playerService.list();
+    public PagedModel<PlayerResponse> list(@PageableDefault(sort = "id") Pageable pageable) {
+        return new PagedModel<>(playerService.list(pageable));
     }
 
     @GetMapping("/{id}")
