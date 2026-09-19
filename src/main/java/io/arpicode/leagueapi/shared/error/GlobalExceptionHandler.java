@@ -26,7 +26,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Map<String, ConstraintMapping> CONSTRAINT_MAPPINGS = Map.of(
             "uq_player_username", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
-            "uq_player_email", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS));
+            "uq_player_email", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS),
+            "uq_board_game_name_normalized", new ConstraintMapping(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS, UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS)
+    );
 
     private record ConstraintMapping(ErrorCode code, String message) {
     }
@@ -157,8 +159,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static HttpStatus statusOf(ErrorCode code) {
         return switch (code) {
-            case PLAYER_NOT_FOUND, NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case USERNAME_ALREADY_EXISTS, EMAIL_ALREADY_EXISTS, DATA_INTEGRITY_VIOLATION -> HttpStatus.CONFLICT;
+            case PLAYER_NOT_FOUND,
+                    NOT_FOUND,
+                    BOARD_GAME_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case USERNAME_ALREADY_EXISTS,
+                    BOARD_GAME_NAME_ALREADY_EXISTS,
+                    EMAIL_ALREADY_EXISTS,
+                    DATA_INTEGRITY_VIOLATION -> HttpStatus.CONFLICT;
             case VALIDATION_ERROR, MALFORMED_REQUEST -> HttpStatus.BAD_REQUEST;
             case METHOD_NOT_ALLOWED -> HttpStatus.METHOD_NOT_ALLOWED;
             case UNSUPPORTED_MEDIA_TYPE -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
