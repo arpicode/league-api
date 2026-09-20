@@ -7,12 +7,15 @@ services:
       POSTGRES_DB: 'meeple_league'
       POSTGRES_USER: 'meeple_league'
       POSTGRES_PASSWORD: 'meeple_league_local'
+      # Pins collation to ICU.
+      # Only applied at initdb, i.e. on a fresh volume. Asserted by V001.
+      POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=und --encoding=UTF8'
     ports:
       - '5432:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U meeple_league -d meeple_league']
+      test: [ 'CMD-SHELL', 'pg_isready -U meeple_league -d meeple_league' ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -20,4 +23,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  db-data: {}
+  db-data: { }
