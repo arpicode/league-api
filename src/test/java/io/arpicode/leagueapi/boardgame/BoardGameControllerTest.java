@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BoardGameControllerTest {
 
     private static final String CLEANUP =
-            "DELETE FROM league.board_game WHERE name IN ('test_board_game_name', 'test_board_game_name_1', 'test_board_game_name_2', 'test_board_game_name_3', 'test_board_game_name_CASE', 'updated_board_game_name')";
+            "DELETE FROM league.board_game WHERE name IN ('test_board_game_name', 'test_board_game_name_1', 'test_board_game_name_2', 'test_board_game_name_3', 'test_board_game_name_CASE', 'updated_test_board_game_name', 'test_other_board_game_name')";
 
 
     @Autowired
@@ -241,8 +241,8 @@ class BoardGameControllerTest {
     @DisplayName("should honour the requested board game page and size")
     void listBoardGamesSecondPage() throws Exception {
         createBoardGame("test_board_game_name_3", 1, 2);
-        createBoardGame("test_board_game_name_2", 1, 2);
-        createBoardGame("test_board_game_name_1", 1, 2);
+        createBoardGame("test_board_game_name_2", 3, 4);
+        createBoardGame("test_board_game_name_1", 5, 6);
 
         // List should be ordered by name so should not depend on insertion order
         mockMvc.perform(get("/api/v1/boardgames?page=1&size=2"))
@@ -285,11 +285,11 @@ class BoardGameControllerTest {
         MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/boardgames/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"updated_board_game_name", "minPlayers":2, "maxPlayers": 3, "avgDurationMin": 45}
+                                {"name": "updated_test_board_game_name", "minPlayers": 2, "maxPlayers": 3, "avgDurationMin": 45}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.intValue()))
-                .andExpect(jsonPath("$.name").value("updated_board_game_name"))
+                .andExpect(jsonPath("$.name").value("updated_test_board_game_name"))
                 .andExpect(jsonPath("$.minPlayers").value(2))
                 .andExpect(jsonPath("$.maxPlayers").value(3))
                 .andExpect(jsonPath("$.avgDurationMin").value(45))
@@ -303,19 +303,132 @@ class BoardGameControllerTest {
     }
 
     @Test
-    void list() throws Exception {
+    @DisplayName("should return 409 Conflict when updating a board game to a name another board game already uses")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void updateBoardGameWithDuplicateEmail() throws Exception {
+        createBoardGame("test_board_game_name", 1, 2, 3);
+        long otherId = createBoardGame("test_other_board_game_name", 1, 2, 3);
+
+        // Different code path from create: the violation surfaces at saveAndFlush, not persist.
+        mockMvc.perform(put("/api/v1/boardgames/{id}", otherId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "test_board_game_name", "minPlayers": 1, "maxPlayers": 2, "avgDurationMin": 3}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS));
     }
 
     @Test
-    void getById() throws Exception {
+    @DisplayName("should return 404 Not Found when trying to update a board game that does not exist")
+    void updateBoardGameNotFound() throws Exception {
+        mockMvc.perform(put("/api/v1/boardgames/{id}", Long.MAX_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "updated_test_board_game_name", "minPlayers": 1, "maxPlayers": 2, "avgDurationMin": 3}
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     @Test
-    void update() throws Exception {
+    @DisplayName("should delete an existing board game")
+    void deleteBoardGame() throws Exception {
+        long id = createBoardGame("test_board_game_name", 1, 2, 3);
+
+        mockMvc.perform(delete("/api/v1/boardgames/{id}", id))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/boardgames/{id}", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
     }
 
     @Test
-    void delete() throws Exception {
+    @DisplayName("should return 404 Not Found when trying to delete a board game that does not exist")
+    void deleteBoardGameNotFound() throws Exception {
+        mockMvc.perform(delete("/api/v1/boardgames/{id}", Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)));
+    }
+
+    //-- Errors raised by Spring rather than by this application's own code.
+    //-- Each pins the status to the code a client would switch on, and that the
+    //-- code/errorId contract holds for responses this application never builds itself.
+
+    @Test
+    @DisplayName("should return 400 Bad Request with the error contract when the JSON body is malformed")
+    void createBoardGameWithMalformedJson() throws Exception {
+        mockMvc.perform(post("/api/v1/boardgames")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{not json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.MALFORMED_REQUEST.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should return 400 Bad Request with the error contract when the id is not a number")
+    void getBoardGameWithNonNumericId() throws Exception {
+        mockMvc.perform(get("/api/v1/boardgames/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.MALFORMED_REQUEST.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found with the error contract for an unknown route")
+    void unknownRoute() throws Exception {
+        mockMvc.perform(get("/api/v1/unknown"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.NOT_FOUND.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should return 405 Method Not Allowed with the error contract for an unsupported method")
+    void unsupportedMethod() throws Exception {
+        mockMvc.perform(patch("/api/v1/boardgames/1"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.METHOD_NOT_ALLOWED.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should return 415 Unsupported Media Type with the error contract for a non-JSON body")
+    void unsupportedMediaType() throws Exception {
+        mockMvc.perform(post("/api/v1/boardgames")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("test_user"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.UNSUPPORTED_MEDIA_TYPE.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should return 500 with the error contract when an unexpected exception escapes")
+    void unexpectedError() throws Exception {
+        // Without the catch-all handler this falls through to Boot's BasicErrorController,
+        // which answers with a different JSON shape carrying neither code nor errorId.
+        mockMvc.perform(get("/api/v1/test-unexpected-error"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.INTERNAL_ERROR.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.INTERNAL_ERROR))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     // -- Helpers
