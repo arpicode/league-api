@@ -24,6 +24,7 @@ public class BoardGame {
     private String name;
 
     @Column(name = "name_normalized", insertable = false, updatable = false)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
     private String nameNormalized;
 
     @Setter
