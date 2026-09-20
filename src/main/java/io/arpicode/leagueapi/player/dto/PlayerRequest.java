@@ -18,7 +18,7 @@ public record PlayerRequest(
 ) {
 
     public PlayerRequest {
-        username = username == null ? null : username.strip().toLowerCase(Locale.ROOT);
+        username = username == null ? null : username.strip();
         email = email == null ? null : email.strip().toLowerCase(Locale.ROOT);
     }
 

@@ -57,11 +57,14 @@ class PlayerControllerTest {
     }
 
     @Test
-    @DisplayName("should strip and lowercase username and email before storing them")
+    @DisplayName("should strip the username but lowercase only the email before storing them")
     void createPlayerNormalized() throws Exception {
+        // The username keeps the casing the player chose, the way board_game.name does:
+        // uniqueness is enforced on the generated username_normalized column instead.
+        // The email has no such column, so PlayerRequest still canonicalises it.
         postPlayer("  Test_User ", "  Test_User@Example.Com ")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value("test_user"))
+                .andExpect(jsonPath("$.username").value("Test_User"))
                 .andExpect(jsonPath("$.email").value("test_user@example.com"));
     }
 

@@ -25,7 +25,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String ERRORS = "errors";
 
     private static final Map<String, ConstraintMapping> CONSTRAINT_MAPPINGS = Map.of(
-            "uq_player_username", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
+            "uq_player_username_normalized", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
             "uq_player_email", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS),
             "uq_board_game_name_normalized", new ConstraintMapping(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS, UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS)
     );

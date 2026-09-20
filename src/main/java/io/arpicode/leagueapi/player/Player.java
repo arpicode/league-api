@@ -23,6 +23,10 @@ public class Player {
     @Column(name = "username", nullable = false, length = 50)
     private String username;
 
+    @Column(name = "username_normalized", insertable = false, updatable = false)
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
+    private String usernameNormalized;
+
     @Setter
     @NonNull
     @Column(name = "email", nullable = false)

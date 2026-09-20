@@ -42,7 +42,7 @@ public class PlayerController {
     // PagedModel rather than Page: Page's JSON shape is explicitly not a stable contract
     // in Spring Data, PagedModel's {content, page:{...}} envelope is.
     @GetMapping
-    public PagedModel<PlayerResponse> list(@PageableDefault(sort = "id") Pageable pageable) {
+    public PagedModel<PlayerResponse> list(@PageableDefault(sort = "usernameNormalized") Pageable pageable) {
         return new PagedModel<>(playerService.list(pageable));
     }
 
