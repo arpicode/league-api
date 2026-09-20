@@ -40,7 +40,7 @@ public class BoardGameController {
     }
 
     @GetMapping
-    public PagedModel<BoardGameResponse> list(@PageableDefault(sort = "name") Pageable pageable) {
+    public PagedModel<BoardGameResponse> list(@PageableDefault(sort = "nameNormalized") Pageable pageable) {
         return new PagedModel<>(boardGameService.list(pageable));
     }
 
