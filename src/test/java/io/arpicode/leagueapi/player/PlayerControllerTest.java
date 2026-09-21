@@ -2,13 +2,13 @@ package io.arpicode.leagueapi.player;
 
 import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.TestcontainersConfiguration;
+import io.arpicode.leagueapi.ThrowingEndpointConfiguration;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -18,8 +18,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
 
@@ -29,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@Import({TestcontainersConfiguration.class, PlayerControllerTest.ThrowingEndpointConfiguration.class})
+@Import({TestcontainersConfiguration.class, ThrowingEndpointConfiguration.class})
 @AutoConfigureMockMvc
 @Transactional
 class PlayerControllerTest {
@@ -432,19 +430,6 @@ class PlayerControllerTest {
 
     //-- Helpers
 
-    // An endpoint that fails the way a real bug would, so the catch-all handler has
-    // something to catch. Registered only for this test class.
-    @TestConfiguration
-    static class ThrowingEndpointConfiguration {
-
-        @RestController
-        static class ThrowingEndpoint {
-            @GetMapping("/api/v1/test-unexpected-error")
-            void boom() {
-                throw new IllegalStateException("simulated unexpected failure");
-            }
-        }
-    }
 
 
     private ResultActions postPlayer(String username, String email) throws Exception {
