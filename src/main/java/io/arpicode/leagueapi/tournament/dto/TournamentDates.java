@@ -11,7 +11,7 @@ import java.lang.annotation.*;
 @Constraint(validatedBy = TournamentDatesValidator.class)
 public @interface TournamentDates {
 
-    String message() default "End date can't be prior the start date";
+    String message() default "End date can't be before the start date";
 
     Class<?>[] groups() default {};
 
