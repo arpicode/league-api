@@ -3,10 +3,10 @@ package io.arpicode.leagueapi.tournament.dto;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-public class TournamentDatesValidator implements ConstraintValidator<TournamentDates, TournamentRequest> {
+public class TournamentDatesValidator implements ConstraintValidator<TournamentDates, TournamentSchedule> {
 
     @Override
-    public boolean isValid(TournamentRequest request, ConstraintValidatorContext context) {
+    public boolean isValid(TournamentSchedule request, ConstraintValidatorContext context) {
         if (request == null ||
                 request.endsOn() == null ||
                 request.startsOn() == null ||

@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 @TournamentDates
-public record TournamentRequest(
+public record TournamentUpdateRequest(
 
         @NotNull(message = "Board game must be set")
         Long boardGameId,
@@ -27,9 +27,9 @@ public record TournamentRequest(
         LocalDate startsOn,
         LocalDate endsOn
 
-) {
+) implements TournamentSchedule {
 
-    public TournamentRequest {
+    public TournamentUpdateRequest {
         name = name == null ? null : name.strip();
     }
 
