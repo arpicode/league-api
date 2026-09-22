@@ -28,7 +28,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             "uq_player_username_normalized", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
             "uq_player_email", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS),
             "uq_board_game_name_normalized", new ConstraintMapping(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS, UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS),
-            "uq_tournament_name_normalized", new ConstraintMapping(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS, UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS)
+            "uq_tournament_name_normalized", new ConstraintMapping(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS, UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS),
+            "fk_tournament_board_game", new ConstraintMapping(ErrorCode.BOARD_GAME_NOT_FOUND, UserMessages.BOARD_GAME_NOT_FOUND)
     );
 
     private record ConstraintMapping(ErrorCode code, String message) {
