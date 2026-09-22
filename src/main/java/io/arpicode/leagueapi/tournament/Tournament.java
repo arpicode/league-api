@@ -1,5 +1,6 @@
 package io.arpicode.leagueapi.tournament;
 
+import io.arpicode.leagueapi.boardgame.BoardGame;
 import io.arpicode.leagueapi.shared.error.BusinessException;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
@@ -21,9 +22,11 @@ public class Tournament {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NonNull
-    @Column(name = "board_game_id", nullable = false)
-    private Long boardGameId;
+    // LAZY plus open-in-view=false: the association is resolved inside the service transaction
+    // that maps to a DTO, never during serialization.
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "board_game_id", nullable = false)
+    private BoardGame boardGame;
 
     @Setter
     @NonNull
@@ -63,8 +66,8 @@ public class Tournament {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    public Tournament(@NonNull Long boardGameId, @NonNull String name) {
-        this.boardGameId = boardGameId;
+    public Tournament(@NonNull BoardGame boardGame, @NonNull String name) {
+        this.boardGame = boardGame;
         this.name = name;
     }
 
@@ -81,8 +84,8 @@ public class Tournament {
     // they reference the (tournament, board_game) pair, and the game they were played with
     // cannot be rewritten underneath them. Re-sending the current value is not a change, so it
     // passes at any status and keeps a full-replace update idempotent.
-    public void changeBoardGame(@NonNull Long target) {
-        if (target.equals(this.boardGameId)) {
+    public void changeBoardGame(@NonNull BoardGame target) {
+        if (target.getId().equals(this.boardGame.getId())) {
             return;
         }
         if (status != TournamentStatus.DRAFT) {
@@ -90,7 +93,7 @@ public class Tournament {
                     ErrorCode.TOURNAMENT_BOARD_GAME_LOCKED,
                     UserMessages.TOURNAMENT_BOARD_GAME_LOCKED.formatted(status));
         }
-        this.boardGameId = target;
+        this.boardGame = target;
     }
 
 }
