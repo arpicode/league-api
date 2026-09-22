@@ -29,7 +29,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             "uq_player_email", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS),
             "uq_board_game_name_normalized", new ConstraintMapping(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS, UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS),
             "uq_tournament_name_normalized", new ConstraintMapping(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS, UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS),
-            "fk_tournament_board_game", new ConstraintMapping(ErrorCode.BOARD_GAME_NOT_FOUND, UserMessages.BOARD_GAME_NOT_FOUND)
+            // Normally the ON DELETE RESTRICT direction: creating a tournament for an unknown board
+            // game is rejected by the explicit lookup in TournamentService, which can name the id.
+            //
+            // The insert direction still reaches here when a game is deleted between that lookup and
+            // the insert, since a plain SELECT takes no row lock -- such a request gets this "in use"
+            // message although the game was in fact deleted. Accepted knowingly: the window is one
+            // statement wide, the FK still keeps the data correct, and only the wording is wrong. A
+            // PESSIMISTIC_READ on the lookup would close it, should the warn below ever show it.
+            "fk_tournament_board_game", new ConstraintMapping(ErrorCode.BOARD_GAME_IN_USE, UserMessages.BOARD_GAME_IN_USE)
     );
 
     private record ConstraintMapping(ErrorCode code, String message) {

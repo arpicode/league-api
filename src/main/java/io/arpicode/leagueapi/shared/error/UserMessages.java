@@ -12,6 +12,7 @@ public final class UserMessages {
 
     public static final String BOARD_GAME_NOT_FOUND = "Board game of ID %d not found";
     public static final String BOARD_GAME_NAME_ALREADY_EXISTS = "Board game name already exists";
+    public static final String BOARD_GAME_IN_USE = "Board game is used by a tournament and can't be deleted";
 
     public static final String TOURNAMENT_NOT_FOUND = "Tournament of ID %d not found";
     public static final String TOURNAMENT_NAME_ALREADY_EXISTS = "Tournament name already exists";
