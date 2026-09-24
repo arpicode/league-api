@@ -19,6 +19,7 @@ import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -74,7 +75,7 @@ class BoardGameControllerTest {
                 .andExpect(jsonPath("$.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.minPlayers").value(1))
                 .andExpect(jsonPath("$.maxPlayers").value(6))
-                .andExpect(jsonPath("$.avgDurationMin").isEmpty())
+                .andExpect(jsonPath("$.avgDurationMin").value(nullValue()))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty());
     }
@@ -212,7 +213,7 @@ class BoardGameControllerTest {
                 .andExpect(jsonPath("$.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.minPlayers").value(1))
                 .andExpect(jsonPath("$.maxPlayers").value(2))
-                .andExpect(jsonPath("$.avgDurationMin").isEmpty())
+                .andExpect(jsonPath("$.avgDurationMin").value(nullValue()))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty());
     }

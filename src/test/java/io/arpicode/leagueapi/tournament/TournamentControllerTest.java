@@ -103,9 +103,9 @@ class TournamentControllerTest {
                 .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.name").value("test_tournament_name"))
                 .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
-                .andExpect(jsonPath("$.maxPlayers").isEmpty())
-                .andExpect(jsonPath("$.startsOn").isEmpty())
-                .andExpect(jsonPath("$.endsOn").isEmpty())
+                .andExpect(jsonPath("$.maxPlayers").value(nullValue()))
+                .andExpect(jsonPath("$.startsOn").value(nullValue()))
+                .andExpect(jsonPath("$.endsOn").value(nullValue()))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty());
     }
@@ -125,9 +125,9 @@ class TournamentControllerTest {
                 .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.name").value("test_tournament_name"))
                 .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
-                .andExpect(jsonPath("$.maxPlayers").isEmpty())
+                .andExpect(jsonPath("$.maxPlayers").value(nullValue()))
                 .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
-                .andExpect(jsonPath("$.endsOn").isEmpty())
+                .andExpect(jsonPath("$.endsOn").value(nullValue()))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty());
     }
