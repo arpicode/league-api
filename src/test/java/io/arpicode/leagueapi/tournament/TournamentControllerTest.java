@@ -9,18 +9,32 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ApiIntegrationTest
 @Transactional
 class TournamentControllerTest {
+
+    // Matches on the generated name_normalized rather than name, so a row committed under a
+    // different casing by a failing test is removed too.
+    private static final String CLEANUP_TOURNAMENTS =
+            "DELETE FROM league.tournament WHERE name_normalized IN ('test_tournament_name', 'updated_test_tournament_name', 'test_other_tournament_name')";
+    private static final String CLEANUP_BOARD_GAMES =
+            "DELETE FROM league.board_game WHERE name_normalized IN ('test_board_game_name', 'test_other_board_game')";
+
 
     @Autowired
     MockMvc mockMvc;
@@ -29,7 +43,7 @@ class TournamentControllerTest {
     void createTournament() throws Exception {
         Long boardGameId = createBoardGame();
 
-        postTournament(boardGameId,
+        MockHttpServletResponse createResponse = postTournament(boardGameId,
                 "test_tournament_name",
                 16,
                 LocalDate.of(2000, 1, 1),
@@ -44,7 +58,13 @@ class TournamentControllerTest {
                 .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
                 .andExpect(jsonPath("$.endsOn").value("2000-01-01"))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.updatedAt").isNotEmpty())
+                .andReturn().getResponse();
+
+        String createdAt = JsonPath.read(createResponse.getContentAsString(), "$.createdAt");
+        String updatedAt = JsonPath.read(createResponse.getContentAsString(), "$.updatedAt");
+
+        assertThat(OffsetDateTime.parse(createdAt)).isEqualTo(OffsetDateTime.parse(updatedAt));
     }
 
     @Test
@@ -242,7 +262,389 @@ class TournamentControllerTest {
 
     // -- Read
 
+    @Test
+    @DisplayName("should return a tournament by id")
+    void getTournamentById() throws Exception {
+        Long boardGameId = createBoardGame();
+        Long id = createTournament(
+                boardGameId,
+                "test_tournament_name",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 1)
+        );
+
+        mockMvc.perform(get("/api/v1/tournaments/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
+                .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
+                .andExpect(jsonPath("$.boardGame.minPlayers").doesNotHaveJsonPath())
+                .andExpect(jsonPath("$.boardGame.maxPlayers").doesNotHaveJsonPath())
+                .andExpect(jsonPath("$.name").value("test_tournament_name"))
+                .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
+                .andExpect(jsonPath("$.maxPlayers").value(16))
+                .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.endsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should return a list of all the tournaments sorted by normalized names")
+    void listAllTournamentsSorted() throws Exception {
+        Long boardGameId = createBoardGame();
+        createTournament(
+                boardGameId,
+                "test_tournament_name_2",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 1)
+        );
+
+        createTournament(
+                boardGameId,
+                "test_tournament_name_1",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 1)
+        );
+
+        createTournament(
+                boardGameId,
+                "test_tournament_name_3",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 1)
+        );
+
+        mockMvc.perform(get("/api/v1/tournaments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].name",
+                        contains("test_tournament_name_1", "test_tournament_name_2", "test_tournament_name_3")))
+                .andExpect(jsonPath("$.page.totalElements").value(3));
+    }
+
+    @Test
+    @DisplayName("should honour the requested tournament page and size")
+    void listTournamentsSecondPage() throws Exception {
+        Long boardGameId = createBoardGame();
+
+        createTournament(
+                boardGameId,
+                "test_tournament_name_3",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 1)
+        );
+        createTournament(
+                boardGameId,
+                "test_tournament_name_2",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 1)
+        );
+        createTournament(
+                boardGameId,
+                "test_tournament_name_1",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 1)
+        );
+
+        mockMvc.perform(get("/api/v1/tournaments?page=1&size=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("test_tournament_name_3"))
+                .andExpect(jsonPath("$.page.number").value(1)) // Second page (0 indexed)
+                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalPages").value(2));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when trying to get a board game that does not exist")
+    void getBoardGameNotFound() throws Exception {
+        mockMvc.perform(get("/api/v1/tournaments/{id}", Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    // -- Update
+
+    @Test
+    @DisplayName("should update an existing tournament when valid data is provided")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void updateTournament() throws Exception {
+        // Create and update each commit in their own transaction (like real requests do),
+        // since Postgres now() is frozen for the life of a transaction and would otherwise
+        // make updatedAt look unchanged even when the update trigger fires correctly.
+        Long boardGameId = createBoardGame();
+
+        MockHttpServletResponse createResponse = postTournament(
+                boardGameId,
+                "test_tournament_name"
+        )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse();
+
+        Number id = JsonPath.read(createResponse.getContentAsString(), "$.id");
+        String createdAt = JsonPath.read(createResponse.getContentAsString(), "$.createdAt");
+        OffsetDateTime oldUpdatedAt =
+                OffsetDateTime.parse(JsonPath.read(createResponse.getContentAsString(), "$.updatedAt"));
+
+        MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                """.formatted(boardGameId, TournamentStatus.OPEN, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.intValue()))
+                .andExpect(jsonPath("$.name").value("updated_test_tournament_name"))
+                .andExpect(jsonPath("$.status").value(TournamentStatus.OPEN.name()))
+                .andExpect(jsonPath("$.maxPlayers").value(16))
+                .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.endsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.createdAt").value(createdAt))
+                .andReturn().getResponse();
+
+        OffsetDateTime newUpdatedAt =
+                OffsetDateTime.parse(JsonPath.read(updateResponse.getContentAsString(), "$.updatedAt"));
+
+        assertThat(newUpdatedAt).isAfter(oldUpdatedAt);
+    }
+
+    @Test
+    @DisplayName("should update an existing tournament that has a draft status when valid data is provided")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void updateTournamentInDraftStatus() throws Exception {
+        // Create and update each commit in their own transaction (like real requests do),
+        // since Postgres now() is frozen for the life of a transaction and would otherwise
+        // make updatedAt look unchanged even when the update trigger fires correctly.
+        Long boardGameId = createBoardGame();
+
+        MockHttpServletResponse createResponse = postTournament(
+                boardGameId,
+                "test_tournament_name"
+        )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse();
+
+        Number id = JsonPath.read(createResponse.getContentAsString(), "$.id");
+        String createdAt = JsonPath.read(createResponse.getContentAsString(), "$.createdAt");
+        OffsetDateTime oldUpdatedAt =
+                OffsetDateTime.parse(JsonPath.read(createResponse.getContentAsString(), "$.updatedAt"));
+
+        MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                """.formatted(boardGameId, TournamentStatus.DRAFT, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.intValue()))
+                .andExpect(jsonPath("$.name").value("updated_test_tournament_name"))
+                .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
+                .andExpect(jsonPath("$.maxPlayers").value(16))
+                .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.endsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.createdAt").value(createdAt))
+                .andReturn().getResponse();
+
+        OffsetDateTime newUpdatedAt =
+                OffsetDateTime.parse(JsonPath.read(updateResponse.getContentAsString(), "$.updatedAt"));
+
+        assertThat(newUpdatedAt).isAfter(oldUpdatedAt);
+    }
+
+    @Test
+    @DisplayName("should allow changing the board game on a tournament that has a draft status")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void changeBoardGameOnDraftTournament() throws Exception {
+        // Create and update each commit in their own transaction (like real requests do),
+        // since Postgres now() is frozen for the life of a transaction and would otherwise
+        // make updatedAt look unchanged even when the update trigger fires correctly.
+        Long boardGameId = createBoardGame();
+        Long otherBoardGameId = createBoardGame("test_other_board_game");
+
+        MockHttpServletResponse createResponse = postTournament(
+                boardGameId,
+                "test_tournament_name"
+        )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse();
+
+        Number id = JsonPath.read(createResponse.getContentAsString(), "$.id");
+        String createdAt = JsonPath.read(createResponse.getContentAsString(), "$.createdAt");
+        OffsetDateTime oldUpdatedAt =
+                OffsetDateTime.parse(JsonPath.read(createResponse.getContentAsString(), "$.updatedAt"));
+
+        MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                """.formatted(otherBoardGameId, TournamentStatus.DRAFT, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.intValue()))
+                .andExpect(jsonPath("$.name").value("updated_test_tournament_name"))
+                .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
+                .andExpect(jsonPath("$.maxPlayers").value(16))
+                .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.endsOn").value("2000-01-01"))
+                .andExpect(jsonPath("$.createdAt").value(createdAt))
+                .andReturn().getResponse();
+
+        OffsetDateTime newUpdatedAt =
+                OffsetDateTime.parse(JsonPath.read(updateResponse.getContentAsString(), "$.updatedAt"));
+
+        assertThat(newUpdatedAt).isAfter(oldUpdatedAt);
+    }
+
+    @Test
+    @DisplayName("should return 409 Conflict when changing the board game on a tournament that has a open status")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void changeBoardGameOnOpenTournament() throws Exception {
+        Long boardGameId = createBoardGame();
+        Long otherBoardGameId = createBoardGame("test_other_board_game");
+
+        MockHttpServletResponse createResponse = postTournament(
+                boardGameId,
+                "test_tournament_name"
+        )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse();
+
+        Number id = JsonPath.read(createResponse.getContentAsString(), "$.id");
+
+        // transition to OPEN
+        mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                """.formatted(boardGameId, TournamentStatus.OPEN, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
+                .andExpect(status().isOk());
+
+        // change the game
+        mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                """.formatted(otherBoardGameId, TournamentStatus.OPEN, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_BOARD_GAME_LOCKED.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_BOARD_GAME_LOCKED.formatted(TournamentStatus.OPEN)));
+    }
+
+    @Test
+    @DisplayName("should return 409 Conflict when transitioning to an illegal stats")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void transitionToIllegalStatus() throws Exception {
+        Long boardGameId = createBoardGame();
+
+        MockHttpServletResponse createResponse = postTournament(
+                boardGameId,
+                "test_tournament_name"
+        )
+                .andExpect(status().isCreated())
+                .andReturn().getResponse();
+
+        Number id = JsonPath.read(createResponse.getContentAsString(), "$.id");
+
+        // illegal transition from DRAFT to IN_PROGRESS
+        mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                """.formatted(boardGameId, TournamentStatus.IN_PROGRESS, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_ILLEGAL_TRANSITION.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_ILLEGAL_TRANSITION.formatted(TournamentStatus.DRAFT, TournamentStatus.IN_PROGRESS)));
+    }
+
+    @Test
+    @DisplayName("should allow changing the board game while opening a tournament in the same request")
+    void changeBoardGameWhileTransitioningToOpen() throws Exception {
+        // changeBoardGame() validates against the status the tournament had when the request
+        // arrived, so repointing a DRAFT tournament and opening it in a single call is allowed.
+        // Applying the transition first would make this very request fail as BOARD_GAME_LOCKED.
+        Long boardGameId = createBoardGame();
+        long otherBoardGameId = createBoardGame("test_other_board_game");
+        long id = createTournament(boardGameId, "test_tournament_name");
+
+        putTournament(id, otherBoardGameId, "test_tournament_name", TournamentStatus.OPEN)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.boardGame.id").value(otherBoardGameId))
+                .andExpect(jsonPath("$.boardGame.name").value("test_other_board_game"))
+                .andExpect(jsonPath("$.status").value(TournamentStatus.OPEN.name()));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when updating a tournament with a board game that does not exist")
+    void updateTournamentWithBoardGameNotFound() throws Exception {
+        // The update path loads the board game rather than referencing it, so an unknown id is
+        // reported as BOARD_GAME_NOT_FOUND instead of surfacing as a raw fk_tournament_board_game
+        // violation once the change is flushed.
+        Long boardGameId = createBoardGame();
+        long id = createTournament(boardGameId, "test_tournament_name");
+
+        putTournament(id, Long.MAX_VALUE, "test_tournament_name", TournamentStatus.DRAFT)
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should clear the optional fields left out of the update request")
+    void updateTournamentClearsOmittedOptionalFields() throws Exception {
+        // PUT replaces the whole resource: an omitted optional field is cleared, not preserved.
+        // Guarding the setters with null checks would quietly turn this endpoint into a PATCH.
+        long boardGameId = createBoardGame();
+        long id = createTournament(boardGameId,
+                "test_tournament_name",
+                16,
+                LocalDate.of(2000, 1, 1),
+                LocalDate.of(2000, 1, 2));
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.DRAFT)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.maxPlayers").value(nullValue()))
+                .andExpect(jsonPath("$.startsOn").value(nullValue()))
+                .andExpect(jsonPath("$.endsOn").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when trying to update a tournament that does not exist")
+    void updateTournamentNotFound() throws Exception {
+        // A real board game id, so a reordering that resolved the game before the tournament
+        // would still be reported here as the tournament being missing.
+        long boardGameId = createBoardGame();
+
+        putTournament(Long.MAX_VALUE, boardGameId, "test_tournament_name", TournamentStatus.DRAFT)
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
     // -- Helpers
+
+    private ResultActions putTournament(long id, long boardGameId, String name, TournamentStatus status) throws Exception {
+        return mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"boardGameId":"%d", "name":"%s", "status":"%s"}
+                        """.formatted(boardGameId, name, status)));
+    }
 
     private ResultActions postTournament(Long boardGameId, String name, int maxPlayers, LocalDate startsOn, LocalDate endsOn) throws Exception {
         return mockMvc.perform(post("/api/v1/tournaments")
@@ -307,6 +709,18 @@ class TournamentControllerTest {
                         .content("""
                                 {"name":"test_board_game_name", "minPlayers":"1", "maxPlayers":"4"}
                                 """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse();
+
+        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
+    }
+
+    private long createBoardGame(String name) throws Exception {
+        MockHttpServletResponse response = mockMvc.perform(post("/api/v1/boardgames")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"%s", "minPlayers":"1", "maxPlayers":"4"}
+                                """.formatted(name)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse();
 

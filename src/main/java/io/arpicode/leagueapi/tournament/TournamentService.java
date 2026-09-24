@@ -8,6 +8,9 @@ import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import io.arpicode.leagueapi.tournament.dto.TournamentCreateRequest;
 import io.arpicode.leagueapi.tournament.dto.TournamentResponse;
+import io.arpicode.leagueapi.tournament.dto.TournamentUpdateRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +41,43 @@ public class TournamentService {
         return toTournamentResponse(saved);
     }
 
+    @Transactional(readOnly = true)
+    public Page<TournamentResponse> list(Pageable pageable) {
+        return tournamentRepository.findAll(pageable)
+                .map(this::toTournamentResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public TournamentResponse getById(long id) {
+        Tournament tournament = tournamentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.TOURNAMENT_NOT_FOUND,
+                        UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
+
+        return toTournamentResponse(tournament);
+    }
+
+    @Transactional
+    public TournamentResponse update(long id, TournamentUpdateRequest tournamentUpdateRequest) {
+        Tournament tournament = tournamentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.TOURNAMENT_NOT_FOUND,
+                        UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
+        BoardGame boardGame = findBoardGame(tournamentUpdateRequest.boardGameId());
+
+        tournament.changeBoardGame(boardGame);
+        tournament.setName(tournamentUpdateRequest.name());
+        tournament.transitionTo(tournamentUpdateRequest.status());
+        tournament.setMaxPlayers(tournamentUpdateRequest.maxPlayers());
+        tournament.setStartsOn(tournamentUpdateRequest.startsOn());
+        tournament.setEndsOn(tournamentUpdateRequest.endsOn());
+
+        tournamentRepository.saveAndFlush(tournament);
+
+        return toTournamentResponse(tournament);
+    }
+
+
     private BoardGame findBoardGame(long id) {
         return boardGameRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
@@ -45,7 +85,7 @@ public class TournamentService {
                         UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
     }
 
-    private static TournamentResponse toTournamentResponse(Tournament tournament) {
+    private TournamentResponse toTournamentResponse(Tournament tournament) {
         BoardGame boardGame = tournament.getBoardGame();
 
         return new TournamentResponse(
