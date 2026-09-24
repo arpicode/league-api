@@ -636,6 +636,63 @@ class TournamentControllerTest {
                 .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
+    @Test
+    @DisplayName("should return 409 Conflict when renaming a tournament that has been closed")
+    void updateTournamentLockedWhenClosed() throws Exception {
+        Long boardGameId = createBoardGame();
+        long id = createTournament(boardGameId, "test_tournament_name");
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
+                .andExpect(status().isOk());
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.IN_PROGRESS)
+                .andExpect(status().isOk());
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.CLOSED)
+                .andExpect(status().isOk());
+
+        putTournament(id, boardGameId, "updated_test_tournament_name", TournamentStatus.CLOSED)
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_LOCKED.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_LOCKED.formatted(TournamentStatus.CLOSED)))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("should accept an update of a cancelled tournament that changes nothing")
+    void updateCancelledTournamentIsIdempotent() throws Exception {
+        // A full-replace client reads a tournament, changes nothing and writes it back.
+        // Re-sending the current values is not an edit, so the lock must not turn that into a
+        // conflict -- the same rule changeBoardGame() follows.
+        Long boardGameId = createBoardGame();
+        long id = createTournament(boardGameId, "test_tournament_name");
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.CANCELLED)
+                .andExpect(status().isOk());
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.CANCELLED)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("test_tournament_name"))
+                .andExpect(jsonPath("$.status").value(TournamentStatus.CANCELLED.name()));
+    }
+
+    @Test
+    @DisplayName("should allow renaming a tournament while cancelling it in the same request")
+    void renameTournamentWhileCancelling() throws Exception {
+        // replaceDetails() validates against the status the request arrived with, so an open
+        // tournament can still be corrected by the very call that cancels it. Applying the
+        // transition first would reject this request against CANCELLED.
+        Long boardGameId = createBoardGame();
+        long id = createTournament(boardGameId, "test_tournament_name");
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
+                .andExpect(status().isOk());
+
+        putTournament(id, boardGameId, "updated_test_tournament_name", TournamentStatus.CANCELLED)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("updated_test_tournament_name"))
+                .andExpect(jsonPath("$.status").value(TournamentStatus.CANCELLED.name()));
+    }
+
     // -- Helpers
 
     private ResultActions putTournament(long id, long boardGameId, String name, TournamentStatus status) throws Exception {

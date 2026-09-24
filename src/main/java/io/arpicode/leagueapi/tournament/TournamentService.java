@@ -32,9 +32,11 @@ public class TournamentService {
         BoardGame boardGame = findBoardGame(tournamentCreateRequest.boardGameId());
 
         Tournament tournament = new Tournament(boardGame, tournamentCreateRequest.name());
-        tournament.setMaxPlayers(tournamentCreateRequest.maxPlayers());
-        tournament.setStartsOn(tournamentCreateRequest.startsOn());
-        tournament.setEndsOn(tournamentCreateRequest.endsOn());
+        tournament.replaceDetails(
+                tournamentCreateRequest.name(),
+                tournamentCreateRequest.maxPlayers(),
+                tournamentCreateRequest.startsOn(),
+                tournamentCreateRequest.endsOn());
 
         Tournament saved = tournamentRepository.save(tournament);
 
@@ -65,12 +67,17 @@ public class TournamentService {
                         UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
         BoardGame boardGame = findBoardGame(tournamentUpdateRequest.boardGameId());
 
+        // Order matters: every field change is validated against the status the request arrived
+        // with, so the transition is applied last. Repointing a DRAFT tournament while opening
+        // it, or renaming an OPEN one while cancelling it, is a single legal request; applying
+        // the transition first would reject both against the status they are moving to.
         tournament.changeBoardGame(boardGame);
-        tournament.setName(tournamentUpdateRequest.name());
+        tournament.replaceDetails(
+                tournamentUpdateRequest.name(),
+                tournamentUpdateRequest.maxPlayers(),
+                tournamentUpdateRequest.startsOn(),
+                tournamentUpdateRequest.endsOn());
         tournament.transitionTo(tournamentUpdateRequest.status());
-        tournament.setMaxPlayers(tournamentUpdateRequest.maxPlayers());
-        tournament.setStartsOn(tournamentUpdateRequest.startsOn());
-        tournament.setEndsOn(tournamentUpdateRequest.endsOn());
 
         tournamentRepository.saveAndFlush(tournament);
 

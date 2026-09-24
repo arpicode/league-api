@@ -18,6 +18,23 @@ class TournamentStatusTest {
         assertThat(expected).isEqualTo(from.canTransitionTo(to));
     }
 
+    @ParameterizedTest(name = "{0} terminal = {1}")
+    @MethodSource("terminalStatuses")
+    @DisplayName("should report a status as terminal only when a tournament can never leave it")
+    void isTerminal(TournamentStatus status, boolean expected) {
+        assertThat(status.isTerminal()).isEqualTo(expected);
+    }
+
+    static Stream<Arguments> terminalStatuses() {
+        return Stream.of(
+                Arguments.of(TournamentStatus.DRAFT, false),
+                Arguments.of(TournamentStatus.OPEN, false),
+                Arguments.of(TournamentStatus.IN_PROGRESS, false),
+                Arguments.of(TournamentStatus.CLOSED, true),
+                Arguments.of(TournamentStatus.CANCELLED, true)
+        );
+    }
+
     static Stream<Arguments> transitions() {
         return Stream.of(
                 // DRAFT

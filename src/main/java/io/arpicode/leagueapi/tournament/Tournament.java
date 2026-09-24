@@ -11,6 +11,7 @@ import org.hibernate.generator.EventType;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -28,7 +29,6 @@ public class Tournament {
     @JoinColumn(name = "board_game_id", nullable = false)
     private BoardGame boardGame;
 
-    @Setter
     @NonNull
     @Column(name = "name", nullable = false, length = 150)
     private String name;
@@ -42,15 +42,12 @@ public class Tournament {
     @Column(name = "status", nullable = false, length = 20)
     private TournamentStatus status = TournamentStatus.DRAFT;
 
-    @Setter
     @Column(name = "max_players")
     private Short maxPlayers;
 
-    @Setter
     @Column(name = "starts_on")
     private LocalDate startsOn;
 
-    @Setter
     @Column(name = "ends_on")
     private LocalDate endsOn;
 
@@ -78,6 +75,29 @@ public class Tournament {
                     UserMessages.TOURNAMENT_ILLEGAL_TRANSITION.formatted(status, target));
         }
         this.status = target;
+    }
+
+    // A tournament that has been played out or called off is a historical record: what the
+    // league actually ran cannot be rewritten afterwards, so every editable field is frozen
+    // together once the status is terminal. Re-sending the current values is not a change, so
+    // it passes at any status and keeps a full-replace update idempotent -- the same rule
+    // changeBoardGame() follows.
+    public void replaceDetails(@NonNull String name, Short maxPlayers, LocalDate startsOn, LocalDate endsOn) {
+        if (name.equals(this.name)
+                && Objects.equals(maxPlayers, this.maxPlayers)
+                && Objects.equals(startsOn, this.startsOn)
+                && Objects.equals(endsOn, this.endsOn)) {
+            return;
+        }
+        if (status.isTerminal()) {
+            throw new BusinessException(
+                    ErrorCode.TOURNAMENT_LOCKED,
+                    UserMessages.TOURNAMENT_LOCKED.formatted(status));
+        }
+        this.name = name;
+        this.maxPlayers = maxPlayers;
+        this.startsOn = startsOn;
+        this.endsOn = endsOn;
     }
 
     // Repointing a tournament at another game is only safe before it opens: once matches exist

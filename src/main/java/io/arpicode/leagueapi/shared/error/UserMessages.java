@@ -18,6 +18,7 @@ public final class UserMessages {
     public static final String TOURNAMENT_NAME_ALREADY_EXISTS = "Tournament name already exists";
     public static final String TOURNAMENT_ILLEGAL_TRANSITION = "Tournament status can't transition from %s to %s";
     public static final String TOURNAMENT_BOARD_GAME_LOCKED = "Tournament board game can't be changed once status is %s";
+    public static final String TOURNAMENT_LOCKED = "Tournament can't be modified once status is %s";
 
     public static final String CONFLICT = "The request conflicts with an existing resource.";
     public static final String VALIDATION_ERROR = "Request validation failed. See 'errors' for details.";
