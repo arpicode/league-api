@@ -29,12 +29,13 @@ class ErrorContractTest {
     // One entry per controller. A new controller adds a line here.
     private static final String BOARD_GAMES = "/api/v1/boardgames";
     private static final String PLAYERS = "/api/v1/players";
+    private static final String TOURNAMENTS = "/api/v1/tournaments";
 
     @Autowired
     MockMvc mockMvc;
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = {BOARD_GAMES, PLAYERS})
+    @ValueSource(strings = {BOARD_GAMES, PLAYERS, TOURNAMENTS})
     @DisplayName("should return 400 Bad Request with the error contract when the JSON body is malformed")
     void malformedJson(String basePath) throws Exception {
         mockMvc.perform(post(basePath)
@@ -47,7 +48,7 @@ class ErrorContractTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = {BOARD_GAMES, PLAYERS})
+    @ValueSource(strings = {BOARD_GAMES, PLAYERS, TOURNAMENTS})
     @DisplayName("should return 400 Bad Request with the error contract when the id is not a number")
     void nonNumericId(String basePath) throws Exception {
         mockMvc.perform(get(basePath + "/abc"))
@@ -58,7 +59,7 @@ class ErrorContractTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = {BOARD_GAMES, PLAYERS})
+    @ValueSource(strings = {BOARD_GAMES, PLAYERS, TOURNAMENTS})
     @DisplayName("should return 405 Method Not Allowed with the error contract for an unsupported method")
     void unsupportedMethod(String basePath) throws Exception {
         mockMvc.perform(patch(basePath + "/1"))
@@ -69,7 +70,7 @@ class ErrorContractTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = {BOARD_GAMES, PLAYERS})
+    @ValueSource(strings = {BOARD_GAMES, PLAYERS, TOURNAMENTS})
     @DisplayName("should return 415 Unsupported Media Type with the error contract for a non-JSON body")
     void unsupportedMediaType(String basePath) throws Exception {
         mockMvc.perform(post(basePath)
