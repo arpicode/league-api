@@ -40,6 +40,7 @@ class TournamentControllerTest {
     MockMvc mockMvc;
 
     @Test
+    @DisplayName("should create a new tournament when valid data is provided")
     void createTournament() throws Exception {
         Long boardGameId = createBoardGame();
 
@@ -639,7 +640,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when renaming a tournament that has been closed")
     void updateTournamentLockedWhenClosed() throws Exception {
-        Long boardGameId = createBoardGame();
+        long boardGameId = createBoardGame();
         long id = createTournament(boardGameId, "test_tournament_name");
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
@@ -663,7 +664,7 @@ class TournamentControllerTest {
         // A full-replace client reads a tournament, changes nothing and writes it back.
         // Re-sending the current values is not an edit, so the lock must not turn that into a
         // conflict -- the same rule changeBoardGame() follows.
-        Long boardGameId = createBoardGame();
+        long boardGameId = createBoardGame();
         long id = createTournament(boardGameId, "test_tournament_name");
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.CANCELLED)
@@ -681,7 +682,7 @@ class TournamentControllerTest {
         // replaceDetails() validates against the status the request arrived with, so an open
         // tournament can still be corrected by the very call that cancels it. Applying the
         // transition first would reject this request against CANCELLED.
-        Long boardGameId = createBoardGame();
+        long boardGameId = createBoardGame();
         long id = createTournament(boardGameId, "test_tournament_name");
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
