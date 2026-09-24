@@ -4,6 +4,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -72,6 +73,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         // Unmapped constraint in ConstraintMapping: the client receives a generic 409, the technical detail remains here.
         ProblemDetail problem = problem(ErrorCode.DATA_INTEGRITY_VIOLATION, UserMessages.CONFLICT);
         log.warn("[{}] unmapped data integrity violation (constraint={})", errorIdOf(problem), constraintName, ex);
+
+        return problem;
+    }
+
+    // A @Version check that matched no row: another request changed the entity in between.
+    // Without this the catch-all below would answer a plain concurrency conflict with a 500.
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ProblemDetail handleOptimisticLock(OptimisticLockingFailureException ex) {
+        ProblemDetail problem = problem(ErrorCode.CONCURRENT_MODIFICATION, UserMessages.CONCURRENT_MODIFICATION);
+        log.info("[{}] concurrent modification: {}", errorIdOf(problem), ex.getMessage());
 
         return problem;
     }

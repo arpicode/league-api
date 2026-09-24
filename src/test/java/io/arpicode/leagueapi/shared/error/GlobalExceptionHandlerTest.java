@@ -4,6 +4,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
@@ -62,6 +63,20 @@ class GlobalExceptionHandlerTest {
 
         assertThat(problem.getProperties()).containsEntry("code", ErrorCode.DATA_INTEGRITY_VIOLATION.name());
         assertThat(problem.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+    }
+
+    @Test
+    @DisplayName("should map a failed version check to a conflict rather than an internal error")
+    void mapsOptimisticLockFailureToConflict() {
+        // Losing a @Version race is an ordinary concurrency outcome, not a server fault. Without
+        // its own handler this falls to the catch-all and the client is told 500 INTERNAL_ERROR
+        // for a request it could simply retry.
+        ProblemDetail problem = handler.handleOptimisticLock(
+                new OptimisticLockingFailureException("Row was updated or deleted by another transaction"));
+
+        assertThat(problem.getProperties()).containsEntry("code", ErrorCode.CONCURRENT_MODIFICATION.name());
+        assertThat(problem.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(problem.getDetail()).isEqualTo(UserMessages.CONCURRENT_MODIFICATION);
     }
 
     private static ConstraintViolationException constraintViolation(String constraintName) {

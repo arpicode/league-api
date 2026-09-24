@@ -19,8 +19,10 @@ public final class UserMessages {
     public static final String TOURNAMENT_ILLEGAL_TRANSITION = "Tournament status can't transition from %s to %s";
     public static final String TOURNAMENT_BOARD_GAME_LOCKED = "Tournament board game can't be changed once status is %s";
     public static final String TOURNAMENT_LOCKED = "Tournament can't be modified once status is %s";
+    public static final String TOURNAMENT_NOT_DELETABLE = "Tournament can't be deleted once status is %s, cancel it instead";
 
     public static final String CONFLICT = "The request conflicts with an existing resource.";
+    public static final String CONCURRENT_MODIFICATION = "The resource was modified by another request. Retry with its current state.";
     public static final String VALIDATION_ERROR = "Request validation failed. See 'errors' for details.";
     public static final String INTERNAL_ERROR = "An unexpected error occurred. Quote the errorId when reporting it.";
 

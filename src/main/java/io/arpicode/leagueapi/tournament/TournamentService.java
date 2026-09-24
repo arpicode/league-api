@@ -85,6 +85,22 @@ public class TournamentService {
     }
 
 
+    // The tournament is loaded rather than deleted by id so the DELETE statement carries its
+    // @Version: a request that opens the tournament between this load and the delete makes the
+    // delete match no row, and the caller gets a conflict instead of silently dropping a
+    // tournament that is no longer a draft.
+    @Transactional
+    public void delete(long id) {
+        Tournament tournament = tournamentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.TOURNAMENT_NOT_FOUND,
+                        UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
+
+        tournament.assertDeletable();
+
+        tournamentRepository.delete(tournament);
+    }
+
     private BoardGame findBoardGame(long id) {
         return boardGameRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(

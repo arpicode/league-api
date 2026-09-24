@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -52,6 +53,12 @@ public class TournamentController {
     @PutMapping("/{id}")
     public TournamentResponse update(@PathVariable long id, @Valid @RequestBody TournamentUpdateRequest tournamentUpdateRequest) {
         return tournamentService.update(id, tournamentUpdateRequest);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable long id) {
+        tournamentService.delete(id);
     }
 
 }

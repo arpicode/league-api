@@ -693,6 +693,61 @@ class TournamentControllerTest {
                 .andExpect(jsonPath("$.status").value(TournamentStatus.CANCELLED.name()));
     }
 
+    // -- Delete
+
+    @Test
+    @DisplayName("should delete a tournament that is still a draft")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    void deleteDraftTournament() throws Exception {
+        // Committed rather than rolled back, so the DELETE really reaches Postgres and the
+        // follow-up read is a fresh query. Inside the test transaction the row would only be
+        // removed from the persistence context, and a database-level refusal -- a future
+        // registrations FK with ON DELETE RESTRICT -- would never surface here.
+        Long boardGameId = createBoardGame();
+        long id = createTournament(boardGameId, "test_tournament_name");
+
+        mockMvc.perform(delete("/api/v1/tournaments/{id}", id))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/tournaments/{id}", id))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
+    }
+
+    @Test
+    @DisplayName("should return 409 Conflict when deleting a tournament that is no longer a draft")
+    void deleteTournamentThatIsNoLongerADraft() throws Exception {
+        long boardGameId = createBoardGame();
+        long id = createTournament(boardGameId, "test_tournament_name");
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/v1/tournaments/{id}", id))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_DELETABLE.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_DELETABLE.formatted(TournamentStatus.OPEN)))
+                .andExpect(jsonPath("$.errorId").isNotEmpty());
+
+        // The guard must leave the row alone, not merely report a conflict on the way out.
+        mockMvc.perform(get("/api/v1/tournaments/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentStatus.OPEN.name()));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when trying to delete a tournament that does not exist")
+    void deleteTournamentNotFound() throws Exception {
+        mockMvc.perform(delete("/api/v1/tournaments/{id}", Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+    }
+
     // -- Helpers
 
     private ResultActions putTournament(long id, long boardGameId, String name, TournamentStatus status) throws Exception {

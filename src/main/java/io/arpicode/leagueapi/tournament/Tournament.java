@@ -77,6 +77,17 @@ public class Tournament {
         this.status = target;
     }
 
+    // A tournament stays deletable only while it is a DRAFT. Registrations attach from OPEN and
+    // matches from IN_PROGRESS, so from then on the row records something the league actually did
+    // and CANCELLED is the way out, not deletion.
+    public void assertDeletable() {
+        if (status != TournamentStatus.DRAFT) {
+            throw new BusinessException(
+                    ErrorCode.TOURNAMENT_NOT_DELETABLE,
+                    UserMessages.TOURNAMENT_NOT_DELETABLE.formatted(status));
+        }
+    }
+
     // A tournament that has been played out or called off is a historical record: what the
     // league actually ran cannot be rewritten afterwards, so every editable field is frozen
     // together once the status is terminal. Re-sending the current values is not a change, so
