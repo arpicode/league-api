@@ -38,7 +38,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             // message although the game was in fact deleted. Accepted knowingly: the window is one
             // statement wide, the FK still keeps the data correct, and only the wording is wrong. A
             // PESSIMISTIC_READ on the lookup would close it, should the warn below ever show it.
-            "fk_tournament_board_game", new ConstraintMapping(ErrorCode.BOARD_GAME_IN_USE, UserMessages.BOARD_GAME_IN_USE)
+            "fk_tournament_board_game", new ConstraintMapping(ErrorCode.BOARD_GAME_IN_USE, UserMessages.BOARD_GAME_IN_USE),
+            // Safety net only: TournamentRegistrationService checks for the registration first and
+            // can name both ids. The code is the same on both paths so a client handles one code,
+            // whichever path answered; only the wording differs.
+            "pk_tournament_registration", new ConstraintMapping(ErrorCode.TOURNAMENT_REGISTRATION_ALREADY_EXISTS, UserMessages.TOURNAMENT_REGISTRATION_ALREADY_EXISTS)
     );
 
     private record ConstraintMapping(ErrorCode code, String message) {

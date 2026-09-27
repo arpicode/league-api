@@ -21,6 +21,10 @@ public final class UserMessages {
     public static final String TOURNAMENT_LOCKED = "Tournament can't be modified once status is %s";
     public static final String TOURNAMENT_NOT_DELETABLE = "Tournament can't be deleted once status is %s, cancel it instead";
 
+    public static final String TOURNAMENT_NOT_OPEN = "Tournament status must be OPEN to register. Current status is %s";
+    public static final String TOURNAMENT_REGISTRATION_PLAYER_ALREADY_REGISTERED = "Player of id %d is already registered for tournament of id %d";
+    public static final String TOURNAMENT_REGISTRATION_ALREADY_EXISTS = "Tournament registration already exists";
+
     public static final String CONFLICT = "The request conflicts with an existing resource.";
     public static final String CONCURRENT_MODIFICATION = "The resource was modified by another request. Retry with its current state.";
     public static final String VALIDATION_ERROR = "Request validation failed. See 'errors' for details.";

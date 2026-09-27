@@ -1,10 +1,14 @@
 package io.arpicode.leagueapi.tournament;
 
+import jakarta.persistence.LockModeType;
 import lombok.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -21,5 +25,14 @@ public interface TournamentRepository extends JpaRepository<Tournament, Long> {
     @NonNull
     @EntityGraph(attributePaths = "boardGame")
     Optional<Tournament> findById(@NonNull Long id);
+
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT tournament
+            FROM Tournament tournament
+            WHERE tournament.id = :id
+            """)
+    Optional<Tournament> findByIdForUpdate(@Param("id") Long id);
 
 }

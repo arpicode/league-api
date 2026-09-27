@@ -91,6 +91,18 @@ public class Tournament {
         }
     }
 
+    // OPEN is the only status that takes registrations. The check only holds until the insert if
+    // the caller loaded this row under a lock, as TournamentRegistrationService does: otherwise a
+    // concurrent transition can move the tournament past OPEN in between.
+    public void assertOpenForRegistration() {
+        if (this.status != TournamentStatus.OPEN) {
+            throw new BusinessException(
+                    ErrorCode.TOURNAMENT_NOT_OPEN,
+                    UserMessages.TOURNAMENT_NOT_OPEN.formatted(this.getStatus())
+            );
+        }
+    }
+
     // A tournament that has been played out or called off is a historical record: what the
     // league actually ran cannot be rewritten afterwards, so every editable field is frozen
     // together once the status is terminal. Re-sending the current values is not a change, so
