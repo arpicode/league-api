@@ -34,7 +34,10 @@ class PlayerControllerTest {
     @Autowired
     MockMvc mockMvc;
 
-    //-- Create
+    @Autowired
+    PlayerFixtures players;
+
+    // -- Create
 
     @Test
     @DisplayName("should create a new player when valid data is provided")
@@ -60,14 +63,14 @@ class PlayerControllerTest {
                 .andExpect(jsonPath("$.email").value("test_user@example.com"));
     }
 
-    //-- Create: uniqueness
+    // -- Create: uniqueness
 
     @Test
     @DisplayName("should return 409 Conflict when trying to create a player with duplicate username")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void createPlayerWithDuplicateUsername() throws Exception {
-        createPlayer("test_user", "test_user@example.com");
+        players.create("test_user", "test_user@example.com");
 
         postPlayer("test_user", "test_user_unique@example.com")
                 .andExpect(status().isConflict())
@@ -82,7 +85,7 @@ class PlayerControllerTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void createPlayerWithDuplicateUsernameCaseInsensitive() throws Exception {
-        createPlayer("test_user", "test_user@example.com");
+        players.create("test_user", "test_user@example.com");
 
         postPlayer("TEST_USER", "test_user_unique@example.com")
                 .andExpect(status().isConflict())
@@ -95,7 +98,7 @@ class PlayerControllerTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void createPlayerWithDuplicateEmail() throws Exception {
-        createPlayer("test_user", "test_user@example.com");
+        players.create("test_user", "test_user@example.com");
 
         postPlayer("test_user_unique", "test_user@example.com")
                 .andExpect(status().isConflict())
@@ -110,7 +113,7 @@ class PlayerControllerTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void createPlayerWithDuplicateEmailCaseInsensitive() throws Exception {
-        createPlayer("test_user", "test_user@example.com");
+        players.create("test_user", "test_user@example.com");
 
         postPlayer("test_user_unique", "TEST_USER@EXAMPLE.COM")
                 .andExpect(status().isConflict())
@@ -118,7 +121,7 @@ class PlayerControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
     }
 
-    //-- Create: field validation
+    // -- Create: field validation
 
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a player with username that is too short")
@@ -193,14 +196,14 @@ class PlayerControllerTest {
                         .value("Email must not exceed 255 characters"));
     }
 
-    //-- Read
+    // -- Read
 
     @Test
     @DisplayName("should return a player by id")
     void getPlayer() throws Exception {
         // Distinct from create/update, which build the response from a just-saved entity:
         // this is the only test that maps an entity read back from the database.
-        long id = createPlayer("test_user", "test_user@example.com");
+        long id = players.create("test_user", "test_user@example.com");
 
         mockMvc.perform(get("/api/v1/players/{id}", id))
                 .andExpect(status().isOk())
@@ -214,9 +217,9 @@ class PlayerControllerTest {
     @Test
     @DisplayName("should return a list of all the players")
     void listAllPlayers() throws Exception {
-        createPlayer("test_user_0", "test_user_0@example.com");
-        createPlayer("test_user_1", "test_user_1@example.com");
-        createPlayer("test_user_2", "test_user_2@example.com");
+        players.create("test_user_0", "test_user_0@example.com");
+        players.create("test_user_1", "test_user_1@example.com");
+        players.create("test_user_2", "test_user_2@example.com");
 
         // Asserting which players come back, not just how many: a count alone would pass
         // even if the endpoint returned the wrong rows or mapped the wrong fields.
@@ -230,9 +233,9 @@ class PlayerControllerTest {
     @Test
     @DisplayName("should honour the requested page and size")
     void listPlayersSecondPage() throws Exception {
-        createPlayer("test_user_0", "test_user_0@example.com");
-        createPlayer("test_user_1", "test_user_1@example.com");
-        createPlayer("test_user_2", "test_user_2@example.com");
+        players.create("test_user_0", "test_user_0@example.com");
+        players.create("test_user_1", "test_user_1@example.com");
+        players.create("test_user_2", "test_user_2@example.com");
 
         // Ignoring the Pageable argument would return all three rows here.
         mockMvc.perform(get("/api/v1/players?page=1&size=2"))
@@ -254,7 +257,7 @@ class PlayerControllerTest {
                 .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
-    //-- Update
+    // -- Update
 
     @Test
     @DisplayName("should update an existing player when valid data is provided")
@@ -296,8 +299,8 @@ class PlayerControllerTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void updatePlayerWithDuplicateEmail() throws Exception {
-        createPlayer("test_user", "test_user@example.com");
-        long otherId = createPlayer("other_user", "other_user@example.com");
+        players.create("test_user", "test_user@example.com");
+        long otherId = players.create("other_user", "other_user@example.com");
 
         // Different code path from create: the violation surfaces at saveAndFlush, not persist.
         mockMvc.perform(put("/api/v1/players/{id}", otherId)
@@ -325,12 +328,12 @@ class PlayerControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
-    //-- Delete
+    // -- Delete
 
     @Test
     @DisplayName("should delete an existing player")
     void deletePlayer() throws Exception {
-        long id = createPlayer("test_user", "test_user@example.com");
+        long id = players.create("test_user", "test_user@example.com");
 
         mockMvc.perform(delete("/api/v1/players/{id}", id))
                 .andExpect(status().isNoContent());
@@ -351,7 +354,7 @@ class PlayerControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
-    //-- Helpers
+    // -- Helpers
 
     private ResultActions postPlayer(String username, String email) throws Exception {
         return mockMvc.perform(post("/api/v1/players")
@@ -359,14 +362,6 @@ class PlayerControllerTest {
                 .content("""
                         {"username":"%s","email":"%s"}
                         """.formatted(username, email)));
-    }
-
-    private long createPlayer(String username, String email) throws Exception {
-        MockHttpServletResponse response = postPlayer(username, email)
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
     }
 
 }
