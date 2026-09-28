@@ -36,6 +36,9 @@ class BoardGameControllerTest {
     @Autowired
     MockMvc mockMvc;
 
+    @Autowired
+    BoardGameFixtures boardGames;
+
     // -- Create
 
     @Test
@@ -85,7 +88,7 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when trying to create a board game with duplicate name")
     void createBoardGameWithDuplicateName() throws Exception {
-        createBoardGame("test_board_game_name", 2, 4, 30);
+        boardGames.create("test_board_game_name", 2, 4, 30);
 
         postBoardGame("test_board_game_name", 1, 6, 45)
                 .andExpect(status().isConflict())
@@ -98,7 +101,7 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when trying to create a board game with duplicate differing only by case")
     void createBoardGameWithDuplicateNameCaseInsensitive() throws Exception {
-        createBoardGame("test_board_game_name", 1, 6, 45);
+        boardGames.create("test_board_game_name", 1, 6, 45);
 
         postBoardGame("Test_Board_Game_Name", 1, 6, 45)
                 .andExpect(status().isConflict())
@@ -189,7 +192,7 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should return a board game by id")
     void getBoarGameById() throws Exception {
-        long id = createBoardGame("test_board_game_name", 1, 2, 3);
+        long id = boardGames.create("test_board_game_name", 1, 2, 3);
 
         mockMvc.perform(get("/api/v1/boardgames/{id}", id))
                 .andExpect(status().isOk())
@@ -205,7 +208,7 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should return a board game with no average duration by id")
     void getBoarGameByIdWithNoAverageDuration() throws Exception {
-        long id = createBoardGame("test_board_game_name", 1, 2);
+        long id = boardGames.create("test_board_game_name", 1, 2);
 
         mockMvc.perform(get("/api/v1/boardgames/{id}", id))
                 .andExpect(status().isOk())
@@ -221,9 +224,9 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should return a list of all the board games")
     void listAllBoardGames() throws Exception {
-        createBoardGame("test_board_game_name_1", 1, 2);
-        createBoardGame("test_board_game_name_2", 1, 2);
-        createBoardGame("test_board_game_name_3", 1, 2);
+        boardGames.create("test_board_game_name_1", 1, 2);
+        boardGames.create("test_board_game_name_2", 1, 2);
+        boardGames.create("test_board_game_name_3", 1, 2);
 
         mockMvc.perform(get("/api/v1/boardgames"))
                 .andExpect(status().isOk())
@@ -235,9 +238,9 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should honour the requested board game page and size")
     void listBoardGamesSecondPage() throws Exception {
-        createBoardGame("test_board_game_name_3", 1, 2);
-        createBoardGame("test_board_game_name_2", 3, 4);
-        createBoardGame("test_board_game_name_1", 5, 6);
+        boardGames.create("test_board_game_name_3", 1, 2);
+        boardGames.create("test_board_game_name_2", 3, 4);
+        boardGames.create("test_board_game_name_1", 5, 6);
 
         // List should be ordered by name so should not depend on insertion order
         mockMvc.perform(get("/api/v1/boardgames?page=1&size=2"))
@@ -302,8 +305,8 @@ class BoardGameControllerTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void updateBoardGameWithDuplicateEmail() throws Exception {
-        createBoardGame("test_board_game_name", 1, 2, 3);
-        long otherId = createBoardGame("test_other_board_game_name", 1, 2, 3);
+        boardGames.create("test_board_game_name", 1, 2, 3);
+        long otherId = boardGames.create("test_other_board_game_name", 1, 2, 3);
 
         // Different code path from create: the violation surfaces at saveAndFlush, not persist.
         mockMvc.perform(put("/api/v1/boardgames/{id}", otherId)
@@ -334,7 +337,7 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should delete an existing board game")
     void deleteBoardGame() throws Exception {
-        long id = createBoardGame("test_board_game_name", 1, 2, 3);
+        long id = boardGames.create("test_board_game_name", 1, 2, 3);
 
         mockMvc.perform(delete("/api/v1/boardgames/{id}", id))
                 .andExpect(status().isNoContent());
@@ -371,22 +374,6 @@ class BoardGameControllerTest {
                 .content("""
                         {"name":"%s", "minPlayers":"%d", "maxPlayers":"%d"}
                         """.formatted(name, minPlayers, maxPlayers)));
-    }
-
-    private long createBoardGame(String name, int minPlayers, int maxPlayers, int avgDurationMin) throws Exception {
-        MockHttpServletResponse response = postBoardGame(name, minPlayers, maxPlayers, avgDurationMin)
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
-    }
-
-    private long createBoardGame(String name, int minPlayers, int maxPlayers) throws Exception {
-        MockHttpServletResponse response = postBoardGame(name, minPlayers, maxPlayers)
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
     }
 
 }
