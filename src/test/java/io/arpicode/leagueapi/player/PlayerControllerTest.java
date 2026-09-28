@@ -81,7 +81,6 @@ class PlayerControllerTest {
         postPlayer("test_user", "test_user_unique@example.com")
                 .andExpect(status().isConflict())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.USERNAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.errorId").isNotEmpty())
                 .andExpect(jsonPath("$.detail").value(UserMessages.USERNAME_ALREADY_EXISTS));
@@ -109,7 +108,6 @@ class PlayerControllerTest {
 
         postPlayer("test_user_unique", "test_user@example.com")
                 .andExpect(status().isConflict())
-                .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
     }

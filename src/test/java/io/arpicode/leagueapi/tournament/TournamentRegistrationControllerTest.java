@@ -37,11 +37,7 @@ class TournamentRegistrationControllerTest {
         long playerId = players.create("test_player_username", "test_player_email@test.com");
         long tournamentId = tournaments.createOpen(16);
 
-        mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"playerId":%d}
-                                """.formatted(playerId)))
+        postRegistration(tournamentId, playerId)
                 .andExpect(status().isCreated())
                 .andExpect(header().stringValues("Location", "http://localhost/api/v1/tournaments/%d/registrations/%d".formatted(tournamentId, playerId)))
                 .andExpect(jsonPath("$.tournamentId").value(tournamentId))
@@ -61,11 +57,7 @@ class TournamentRegistrationControllerTest {
         long tournamentBId = tournaments.createOpen(2);
         registerNewPlayers(tournamentBId, 2);
 
-        mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentAId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"playerId":%d}
-                                """.formatted(playerId)))
+        postRegistration(tournamentAId, playerId)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
     }
@@ -77,11 +69,7 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen(2);
         registerNewPlayers(tournamentId, 2);
 
-        mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"playerId":%d}
-                                """.formatted(playerId)))
+        postRegistration(tournamentId, playerId)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()))
                 .andExpect(jsonPath("$.waitlistPosition").value(1));

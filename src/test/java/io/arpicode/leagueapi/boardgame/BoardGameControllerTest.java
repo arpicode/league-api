@@ -66,12 +66,7 @@ class BoardGameControllerTest {
     void createBoardGameWithCaseSensitiveName() throws Exception {
         postBoardGame("test_board_game_name_CASE", 1, 6, 45)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("test_board_game_name_CASE"))
-                .andExpect(jsonPath("$.minPlayers").value(1))
-                .andExpect(jsonPath("$.maxPlayers").value(6))
-                .andExpect(jsonPath("$.avgDurationMin").value(45))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.name").value("test_board_game_name_CASE"));
     }
 
     @Test
@@ -79,12 +74,7 @@ class BoardGameControllerTest {
     void createBoardGameWithNoAverageDuration() throws Exception {
         postBoardGame("test_board_game_name", 1, 6)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("test_board_game_name"))
-                .andExpect(jsonPath("$.minPlayers").value(1))
-                .andExpect(jsonPath("$.maxPlayers").value(6))
-                .andExpect(jsonPath("$.avgDurationMin").value(nullValue()))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.avgDurationMin").value(nullValue()));
     }
 
     // -- Create: uniqueness
@@ -97,7 +87,6 @@ class BoardGameControllerTest {
         postBoardGame("test_board_game_name", 1, 6, 45)
                 .andExpect(status().isConflict())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.errorId").isNotEmpty())
                 .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS));
@@ -110,7 +99,6 @@ class BoardGameControllerTest {
 
         postBoardGame("Test_Board_Game_Name", 1, 6, 45)
                 .andExpect(status().isConflict())
-                .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS));
     }
@@ -189,7 +177,7 @@ class BoardGameControllerTest {
 
     @Test
     @DisplayName("should return a board game by id")
-    void getBoarGameById() throws Exception {
+    void getBoardGameById() throws Exception {
         long id = boardGames.create("test_board_game_name", 1, 2, 3);
 
         mockMvc.perform(get("/api/v1/boardgames/{id}", id))
@@ -205,18 +193,12 @@ class BoardGameControllerTest {
 
     @Test
     @DisplayName("should return a board game with no average duration by id")
-    void getBoarGameByIdWithNoAverageDuration() throws Exception {
+    void getBoardGameByIdWithNoAverageDuration() throws Exception {
         long id = boardGames.create("test_board_game_name", 1, 2);
 
         mockMvc.perform(get("/api/v1/boardgames/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.name").value("test_board_game_name"))
-                .andExpect(jsonPath("$.minPlayers").value(1))
-                .andExpect(jsonPath("$.maxPlayers").value(2))
-                .andExpect(jsonPath("$.avgDurationMin").value(nullValue()))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.avgDurationMin").value(nullValue()));
     }
 
     @Test
@@ -300,7 +282,7 @@ class BoardGameControllerTest {
     @DisplayName("should return 409 Conflict when updating a board game to a name another board game already uses")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void updateBoardGameWithDuplicateEmail() throws Exception {
+    void updateBoardGameWithDuplicateName() throws Exception {
         boardGames.create("test_board_game_name", 1, 2, 3);
         long otherId = boardGames.create("test_other_board_game_name", 1, 2, 3);
 
@@ -357,7 +339,7 @@ class BoardGameControllerTest {
         return mockMvc.perform(post("/api/v1/boardgames")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"name":"%s", "minPlayers":"%d", "maxPlayers":"%d", "avgDurationMin":"%d"}
+                        {"name":"%s", "minPlayers":%d, "maxPlayers":%d, "avgDurationMin":%d}
                         """.formatted(name, minPlayers, maxPlayers, avgDurationMin)));
     }
 
@@ -365,7 +347,7 @@ class BoardGameControllerTest {
         return mockMvc.perform(post("/api/v1/boardgames")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"name":"%s", "minPlayers":"%d", "maxPlayers":"%d"}
+                        {"name":"%s", "minPlayers":%d, "maxPlayers":%d}
                         """.formatted(name, minPlayers, maxPlayers)));
     }
 

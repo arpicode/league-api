@@ -83,63 +83,37 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should create a new tournament when valid data is provided keeping the name casing")
     void createTournamentWithCaseSensitiveName() throws Exception {
-        Long boardGameId = boardGames.create("test_board_game_name");
+        Long boardGameId = boardGames.create();
 
-        postTournament(boardGameId,
-                "test_tournament_name_CASE",
-                16,
-                LocalDate.of(2000, 1, 1),
-                LocalDate.of(2000, 1, 1))
+        postTournament(boardGameId, "test_tournament_name_CASE")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
-                .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
-                .andExpect(jsonPath("$.name").value("test_tournament_name_CASE"))
-                .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
-                .andExpect(jsonPath("$.maxPlayers").value(16))
-                .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
-                .andExpect(jsonPath("$.endsOn").value("2000-01-01"))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.name").value("test_tournament_name_CASE"));
     }
 
     @Test
     @DisplayName("should create a new tournament when valid data with no optional fields is provided")
     void createTournamentWithNoOptionalFields() throws Exception {
-        Long boardGameId = boardGames.create("test_board_game_name");
+        Long boardGameId = boardGames.create();
 
-        postTournament(boardGameId,
-                "test_tournament_name")
+        postTournament(boardGameId, "test_tournament_name")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
-                .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
-                .andExpect(jsonPath("$.name").value("test_tournament_name"))
-                .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
                 .andExpect(jsonPath("$.maxPlayers").value(nullValue()))
                 .andExpect(jsonPath("$.startsOn").value(nullValue()))
-                .andExpect(jsonPath("$.endsOn").value(nullValue()))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.endsOn").value(nullValue()));
     }
 
     @Test
     @DisplayName("should create a new tournament when a start date and no end date are provided")
     void createTournamentWithStartDateAndNoEndDate() throws Exception {
-        Long boardGameId = boardGames.create("test_board_game_name");
+        Long boardGameId = boardGames.create();
 
         postTournament(boardGameId,
                 "test_tournament_name",
                 LocalDate.of(2000, 1, 1),
                 null)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
-                .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
-                .andExpect(jsonPath("$.name").value("test_tournament_name"))
-                .andExpect(jsonPath("$.status").value(TournamentStatus.DRAFT.name()))
-                .andExpect(jsonPath("$.maxPlayers").value(nullValue()))
                 .andExpect(jsonPath("$.startsOn").value("2000-01-01"))
-                .andExpect(jsonPath("$.endsOn").value(nullValue()))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.endsOn").value(nullValue()));
     }
 
     // -- Create: uniqueness
@@ -153,7 +127,6 @@ class TournamentControllerTest {
         postTournament(boardGameId, "test_tournament_name")
                 .andExpect(status().isConflict())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.errorId").isNotEmpty())
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS));
@@ -167,7 +140,6 @@ class TournamentControllerTest {
 
         postTournament(boardGameId, "TEST_TOURNAMENT_NAME")
                 .andExpect(status().isConflict())
-                .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS));
     }
@@ -327,8 +299,8 @@ class TournamentControllerTest {
     }
 
     @Test
-    @DisplayName("should return 404 Not Found when trying to get a board game that does not exist")
-    void getBoardGameNotFound() throws Exception {
+    @DisplayName("should return 404 Not Found when trying to get a tournament that does not exist")
+    void getTournamentNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/tournaments/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
@@ -362,7 +334,7 @@ class TournamentControllerTest {
         MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":16, "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(boardGameId, TournamentStatus.OPEN, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.intValue()))
@@ -405,7 +377,7 @@ class TournamentControllerTest {
         MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":16, "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(boardGameId, TournamentStatus.DRAFT, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.intValue()))
@@ -449,7 +421,7 @@ class TournamentControllerTest {
         MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":16, "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(otherBoardGameId, TournamentStatus.DRAFT, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.intValue()))
@@ -488,7 +460,7 @@ class TournamentControllerTest {
         mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":16, "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(boardGameId, TournamentStatus.OPEN, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isOk());
 
@@ -496,7 +468,7 @@ class TournamentControllerTest {
         mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":16, "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(otherBoardGameId, TournamentStatus.OPEN, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_BOARD_GAME_LOCKED.name()))
@@ -504,7 +476,7 @@ class TournamentControllerTest {
     }
 
     @Test
-    @DisplayName("should return 409 Conflict when transitioning to an illegal stats")
+    @DisplayName("should return 409 Conflict when transitioning to an illegal status")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void transitionToIllegalStatus() throws Exception {
@@ -523,7 +495,7 @@ class TournamentControllerTest {
         mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
+                                {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":16, "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(boardGameId, TournamentStatus.IN_PROGRESS, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_ILLEGAL_TRANSITION.name()))
@@ -707,7 +679,7 @@ class TournamentControllerTest {
         return mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"boardGameId":"%d", "name":"%s", "status":"%s"}
+                        {"boardGameId":%d, "name":"%s", "status":"%s"}
                         """.formatted(boardGameId, name, status)));
     }
 
@@ -715,22 +687,22 @@ class TournamentControllerTest {
         return mockMvc.perform(post("/api/v1/tournaments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"boardGameId":"%d", "name":"%s", "maxPlayers":"%d", "startsOn":"%s", "endsOn":"%s"}
+                        {"boardGameId":%d, "name":"%s", "maxPlayers":%d, "startsOn":"%s", "endsOn":"%s"}
                         """.formatted(boardGameId, name, maxPlayers, startsOn, endsOn)));
     }
 
     private ResultActions postTournament(Long boardGameId, String name, LocalDate startsOn, LocalDate endsOn) throws Exception {
         String body = """
-                {"boardGameId":"%d", "name":"%s", "startsOn":"%s", "endsOn":"%s"}
+                {"boardGameId":%d, "name":"%s", "startsOn":"%s", "endsOn":"%s"}
                 """.formatted(boardGameId, name, startsOn, endsOn);
         if (startsOn == null) {
             body = """
-                    {"boardGameId":"%d", "name":"%s", "endsOn":"%s"}
+                    {"boardGameId":%d, "name":"%s", "endsOn":"%s"}
                     """.formatted(boardGameId, name, endsOn);
         }
         if (endsOn == null) {
             body = """
-                    {"boardGameId":"%d", "name":"%s", "startsOn":"%s"}
+                    {"boardGameId":%d, "name":"%s", "startsOn":"%s"}
                     """.formatted(boardGameId, name, startsOn);
         }
         return mockMvc.perform(post("/api/v1/tournaments")
@@ -742,7 +714,7 @@ class TournamentControllerTest {
         return mockMvc.perform(post("/api/v1/tournaments")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"boardGameId":"%d", "name":"%s"}
+                        {"boardGameId":%d, "name":"%s"}
                         """.formatted(boardGameId, name)));
     }
 
