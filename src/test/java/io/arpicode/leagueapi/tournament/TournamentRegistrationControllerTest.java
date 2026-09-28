@@ -1,21 +1,19 @@
 package io.arpicode.leagueapi.tournament;
 
-import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.ApiIntegrationTest;
+import io.arpicode.leagueapi.player.PlayerFixtures;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ApiIntegrationTest
@@ -25,18 +23,19 @@ class TournamentRegistrationControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private PlayerFixtures players;
+
+    @Autowired
+    private TournamentFixtures tournaments;
+
     // -- Create
 
     @Test
     @DisplayName("should create a tournament confirmed registration when there's enough room left")
     void createTournamentConfirmedRegistration() throws Exception {
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
-        long boardGameId = createBoardGame("test_board_game_name", 1, 4);
-        long tournamentId = createTournament(boardGameId, "test_tournament_name", 16);
-
-        putTournament(tournamentId, boardGameId, "test_tournament_name", 16, TournamentStatus.OPEN)
-                .andExpect(status().isOk());
-
+        long playerId = players.create("test_player_username", "test_player_email@test.com");
+        long tournamentId = tournaments.createOpen(16);
 
         mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -57,10 +56,10 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should create for the targeted tournament a confirmed registration when there's enough room left")
     void createTournamentRegistrationForTargetedTournament() throws Exception {
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
-
-        long tournamentAId = createTournamentWithNRegistrations("test_tournament_name_A", "test_board_game_name_A", 2, 0);
-        createTournamentWithNRegistrations("test_tournament_name_B", "test_board_game_name_B", 2, 2);
+        long playerId = players.create();
+        long tournamentAId = tournaments.createOpen(2);
+        long tournamentBId = tournaments.createOpen(2);
+        registerNewPlayers(tournamentBId, 2);
 
         mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentAId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -74,11 +73,11 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should create a waitlisted tournament registration when there's not enough room left")
     void createTournamentRegistrationWhenNotEnoughRoom() throws Exception {
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
+        long playerId = players.create();
+        long tournamentId = tournaments.createOpen(2);
+        registerNewPlayers(tournamentId, 2);
 
-        long tournamentAId = createTournamentWithNRegistrations("test_tournament_name_A", "test_board_game_name_A", 2, 2);
-
-        mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentAId)
+        mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"playerId":%d}
@@ -91,8 +90,8 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should create a confirmed registration when the tournament has no maximum number of players")
     void createTournamentRegistrationWithoutMaxPlayers() throws Exception {
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
-        long tournamentId = createTournamentWithNRegistrations("test_tournament_name", "test_board_game_name", null, 0);
+        long playerId = players.create();
+        long tournamentId = tournaments.createOpen(null);
 
         postRegistration(tournamentId, playerId)
                 .andExpect(status().isCreated())
@@ -102,8 +101,8 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when the player is already registered for the tournament")
     void createTournamentRegistrationDuplicate() throws Exception {
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
-        long tournamentId = createTournamentWithNRegistrations("test_tournament_name", "test_board_game_name", 2, 0);
+        long playerId = players.create();
+        long tournamentId = tournaments.createOpen();
 
         postRegistration(tournamentId, playerId)
                 .andExpect(status().isCreated());
@@ -119,9 +118,8 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when registering for a tournament that is still a draft")
     void createTournamentRegistrationDraftTournament() throws Exception {
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
-        long boardGameId = createBoardGame("test_board_game_name", 1, 4);
-        long tournamentId = createTournament(boardGameId, "test_tournament_name", 2);
+        long playerId = players.create();
+        long tournamentId = tournaments.createDraft();
 
         postRegistration(tournamentId, playerId)
                 .andExpect(status().isConflict())
@@ -132,14 +130,8 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when registering for a tournament that is already in progress")
     void createTournamentRegistrationInProgressTournament() throws Exception {
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
-        long boardGameId = createBoardGame("test_board_game_name", 1, 4);
-        long tournamentId = createTournament(boardGameId, "test_tournament_name", 2);
-
-        putTournament(tournamentId, boardGameId, "test_tournament_name", 2, TournamentStatus.OPEN)
-                .andExpect(status().isOk());
-        putTournament(tournamentId, boardGameId, "test_tournament_name", 2, TournamentStatus.IN_PROGRESS)
-                .andExpect(status().isOk());
+        long playerId = players.create();
+        long tournamentId = tournaments.createInProgress();
 
         postRegistration(tournamentId, playerId)
                 .andExpect(status().isConflict())
@@ -152,7 +144,7 @@ class TournamentRegistrationControllerTest {
     void createTournamentRegistrationTournamentNotFound() throws Exception {
         // A real player id, so a reordering that resolved the player before the tournament
         // would still be reported here as the tournament being missing.
-        long playerId = createPlayer("test_player_username", "test_player_email@test.com");
+        long playerId = players.create();
 
         postRegistration(Long.MAX_VALUE, playerId)
                 .andExpect(status().isNotFound())
@@ -164,7 +156,7 @@ class TournamentRegistrationControllerTest {
     @DisplayName("should return 404 Not Found when registering a player that does not exist")
     void createTournamentRegistrationPlayerNotFound() throws Exception {
         // Opened first: the status check runs before the player lookup, so a DRAFT would answer 409.
-        long tournamentId = createTournamentWithNRegistrations("test_tournament_name", "test_board_game_name", 2, 0);
+        long tournamentId = tournaments.createOpen();
 
         postRegistration(tournamentId, Long.MAX_VALUE)
                 .andExpect(status().isNotFound())
@@ -172,7 +164,7 @@ class TournamentRegistrationControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
-    //-- Helpers
+    // -- Helpers
 
     private ResultActions postRegistration(long tournamentId, long playerId) throws Exception {
         return mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
@@ -182,86 +174,13 @@ class TournamentRegistrationControllerTest {
                         """.formatted(playerId)));
     }
 
-    private ResultActions postPlayer(String username, String email) throws Exception {
-        return mockMvc.perform(post("/api/v1/players")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"username":"%s","email":"%s"}
-                        """.formatted(username, email)));
-    }
-
-    private long createPlayer(String username, String email) throws Exception {
-        MockHttpServletResponse response = postPlayer(username, email)
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
-    }
-
-    private ResultActions postTournament(Long boardGameId, String name, Integer maxPlayers) throws Exception {
-        return mockMvc.perform(post("/api/v1/tournaments")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"boardGameId":"%d", "name":"%s", "maxPlayers":%d}
-                        """.formatted(boardGameId, name, maxPlayers)));
-    }
-
-    private long createTournament(Long boardGameId, String name, Integer maxPlayers) throws Exception {
-        MockHttpServletResponse response = postTournament(boardGameId, name, maxPlayers)
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
-    }
-
-    private long createTournamentWithNRegistrations(String tournamentName, String boardGameName, Integer tournamentMaxPlayers, int numRegistrations) throws Exception {
-        long boardGameId = createBoardGame(boardGameName, 1, 1 + numRegistrations);
-        long tournamentId = createTournament(boardGameId, tournamentName, tournamentMaxPlayers);
-
-        putTournament(tournamentId, boardGameId, tournamentName, tournamentMaxPlayers, TournamentStatus.OPEN)
-                .andExpect(status().isOk());
-
-        for (int i = 0; i < numRegistrations; i++) {
-
-            String username = "test_player_username_%d_for_%s".formatted(i + 1, tournamentName);
-            String email = "test_player_email_%d_for_%s@test.com".formatted(i + 1, tournamentName);
-
-            long playerId = createPlayer(username, email);
-
-            mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {"playerId": %d}
-                                    """.formatted(playerId)))
+    // Fills a tournament through the endpoint under test, one new player per registration. It stays
+    // here rather than in TournamentFixtures while no other feature's tests need registrations.
+    private void registerNewPlayers(long tournamentId, int count) throws Exception {
+        for (int i = 0; i < count; i++) {
+            postRegistration(tournamentId, players.create())
                     .andExpect(status().isCreated());
         }
-
-        return tournamentId;
-    }
-
-    private ResultActions putTournament(long id, long boardGameId, String name, Integer tournamentMaxPlayers, TournamentStatus status) throws Exception {
-        return mockMvc.perform(put("/api/v1/tournaments/{id}", id)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"boardGameId":"%d", "name":"%s", "status":"%s", "maxPlayers":%d}
-                        """.formatted(boardGameId, name, status, tournamentMaxPlayers)));
-    }
-
-
-    private ResultActions postBoardGame(String name, int minPlayers, int maxPlayers) throws Exception {
-        return mockMvc.perform(post("/api/v1/boardgames")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"name":"%s", "minPlayers":"%d", "maxPlayers":"%d"}
-                        """.formatted(name, minPlayers, maxPlayers)));
-    }
-
-    private long createBoardGame(String name, int minPlayers, int maxPlayers) throws Exception {
-        MockHttpServletResponse response = postBoardGame(name, minPlayers, maxPlayers)
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
     }
 
 }

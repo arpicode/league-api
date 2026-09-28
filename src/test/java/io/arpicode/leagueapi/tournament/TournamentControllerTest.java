@@ -2,6 +2,7 @@ package io.arpicode.leagueapi.tournament;
 
 import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.ApiIntegrationTest;
+import io.arpicode.leagueapi.boardgame.BoardGameFixtures;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.junit.jupiter.api.DisplayName;
@@ -39,10 +40,16 @@ class TournamentControllerTest {
     @Autowired
     MockMvc mockMvc;
 
+    @Autowired
+    BoardGameFixtures boardGames;
+
+    @Autowired
+    TournamentFixtures tournaments;
+
     @Test
     @DisplayName("should create a new tournament when valid data is provided")
     void createTournament() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create("test_board_game_name");
 
         MockHttpServletResponse createResponse = postTournament(boardGameId,
                 "test_tournament_name",
@@ -71,7 +78,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should create a new tournament when valid data is provided keeping the name casing")
     void createTournamentWithCaseSensitiveName() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create("test_board_game_name");
 
         postTournament(boardGameId,
                 "test_tournament_name_CASE",
@@ -94,7 +101,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should create a new tournament when valid data with no optional fields is provided")
     void createTournamentWithNoOptionalFields() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create("test_board_game_name");
 
         postTournament(boardGameId,
                 "test_tournament_name")
@@ -114,7 +121,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should create a new tournament when a start date and no end date are provided")
     void createTournamentWithStartDateAndNoEndDate() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create("test_board_game_name");
 
         postTournament(boardGameId,
                 "test_tournament_name",
@@ -138,8 +145,8 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when trying to create a tournament with duplicate name")
     void createTournamentWithDuplicateName() throws Exception {
-        Long boardGameId = createBoardGame();
-        createTournament(boardGameId, "test_tournament_name");
+        Long boardGameId = boardGames.create();
+        tournaments.create(boardGameId, "test_tournament_name");
 
         postTournament(boardGameId, "test_tournament_name")
                 .andExpect(status().isConflict())
@@ -152,8 +159,8 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when trying to create a tournament with duplicate differing only by case")
     void createTournamentWithDuplicateNameCaseInsensitive() throws Exception {
-        Long boardGameId = createBoardGame();
-        createTournament(boardGameId, "test_tournament_name");
+        Long boardGameId = boardGames.create();
+        tournaments.create(boardGameId, "test_tournament_name");
 
         postTournament(boardGameId, "TEST_TOURNAMENT_NAME")
                 .andExpect(status().isConflict())
@@ -168,7 +175,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a tournament with name that is too short")
     void createTournamentWithInvalidDataTooShortName() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create();
 
         postTournament(boardGameId, "t")
                 .andExpect(status().isBadRequest())
@@ -182,7 +189,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a tournament with name that is too long")
     void createTournamentWithInvalidDataTooLongName() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create();
 
         postTournament(boardGameId, "t".repeat(151))
                 .andExpect(status().isBadRequest())
@@ -196,7 +203,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a tournament with a blank name")
     void createTournamentWithInvalidDataBlankName() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create();
 
         postTournament(boardGameId, "")
                 .andExpect(status().isBadRequest())
@@ -212,7 +219,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a tournament with max players lower than 2")
     void createTournamentWithInvalidDataWithTooLowMaxPlayers() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create();
 
         postTournament(boardGameId,
                 "test_tournament_name",
@@ -230,7 +237,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a tournament with an end date without a start date")
     void createTournamentWithInvalidDatesEndWithoutStart() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create();
 
         postTournament(boardGameId,
                 "test_tournament_name",
@@ -247,7 +254,7 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a tournament with an end date before a start date")
     void createTournamentWithInvalidDatesEndBeforeStart() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create();
 
         postTournament(boardGameId,
                 "test_tournament_name",
@@ -266,8 +273,8 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return a tournament by id")
     void getTournamentById() throws Exception {
-        Long boardGameId = createBoardGame();
-        Long id = createTournament(
+        Long boardGameId = boardGames.create("test_board_game_name");
+        Long id = tournaments.create(
                 boardGameId,
                 "test_tournament_name",
                 16,
@@ -293,30 +300,10 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return a list of all the tournaments sorted by normalized names")
     void listAllTournamentsSorted() throws Exception {
-        Long boardGameId = createBoardGame();
-        createTournament(
-                boardGameId,
-                "test_tournament_name_2",
-                16,
-                LocalDate.of(2000, 1, 1),
-                LocalDate.of(2000, 1, 1)
-        );
-
-        createTournament(
-                boardGameId,
-                "test_tournament_name_1",
-                16,
-                LocalDate.of(2000, 1, 1),
-                LocalDate.of(2000, 1, 1)
-        );
-
-        createTournament(
-                boardGameId,
-                "test_tournament_name_3",
-                16,
-                LocalDate.of(2000, 1, 1),
-                LocalDate.of(2000, 1, 1)
-        );
+        Long boardGameId = boardGames.create();
+        tournaments.create(boardGameId, "test_tournament_name_2");
+        tournaments.create(boardGameId, "test_tournament_name_1");
+        tournaments.create(boardGameId, "test_tournament_name_3");
 
         mockMvc.perform(get("/api/v1/tournaments"))
                 .andExpect(status().isOk())
@@ -328,29 +315,11 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should honour the requested tournament page and size")
     void listTournamentsSecondPage() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create();
 
-        createTournament(
-                boardGameId,
-                "test_tournament_name_3",
-                16,
-                LocalDate.of(2000, 1, 1),
-                LocalDate.of(2000, 1, 1)
-        );
-        createTournament(
-                boardGameId,
-                "test_tournament_name_2",
-                16,
-                LocalDate.of(2000, 1, 1),
-                LocalDate.of(2000, 1, 1)
-        );
-        createTournament(
-                boardGameId,
-                "test_tournament_name_1",
-                16,
-                LocalDate.of(2000, 1, 1),
-                LocalDate.of(2000, 1, 1)
-        );
+        tournaments.create(boardGameId, "test_tournament_name_3");
+        tournaments.create(boardGameId, "test_tournament_name_2");
+        tournaments.create(boardGameId, "test_tournament_name_1");
 
         mockMvc.perform(get("/api/v1/tournaments?page=1&size=2"))
                 .andExpect(status().isOk())
@@ -382,7 +351,7 @@ class TournamentControllerTest {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
         // make updatedAt look unchanged even when the update trigger fires correctly.
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create("test_board_game_name");
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -425,7 +394,7 @@ class TournamentControllerTest {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
         // make updatedAt look unchanged even when the update trigger fires correctly.
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create("test_board_game_name");
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -468,8 +437,8 @@ class TournamentControllerTest {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
         // make updatedAt look unchanged even when the update trigger fires correctly.
-        Long boardGameId = createBoardGame();
-        Long otherBoardGameId = createBoardGame("test_other_board_game");
+        Long boardGameId = boardGames.create("test_board_game_name");
+        Long otherBoardGameId = boardGames.create("test_other_board_game");
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -509,8 +478,8 @@ class TournamentControllerTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void changeBoardGameOnOpenTournament() throws Exception {
-        Long boardGameId = createBoardGame();
-        Long otherBoardGameId = createBoardGame("test_other_board_game");
+        Long boardGameId = boardGames.create("test_board_game_name");
+        Long otherBoardGameId = boardGames.create("test_other_board_game");
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -546,7 +515,7 @@ class TournamentControllerTest {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void transitionToIllegalStatus() throws Exception {
-        Long boardGameId = createBoardGame();
+        Long boardGameId = boardGames.create("test_board_game_name");
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -575,9 +544,9 @@ class TournamentControllerTest {
         // changeBoardGame() validates against the status the tournament had when the request
         // arrived, so repointing a DRAFT tournament and opening it in a single call is allowed.
         // Applying the transition first would make this very request fail as BOARD_GAME_LOCKED.
-        Long boardGameId = createBoardGame();
-        long otherBoardGameId = createBoardGame("test_other_board_game");
-        long id = createTournament(boardGameId, "test_tournament_name");
+        Long boardGameId = boardGames.create();
+        long otherBoardGameId = boardGames.create("test_other_board_game");
+        long id = tournaments.create(boardGameId, "test_tournament_name");
 
         putTournament(id, otherBoardGameId, "test_tournament_name", TournamentStatus.OPEN)
                 .andExpect(status().isOk())
@@ -592,8 +561,8 @@ class TournamentControllerTest {
         // The update path loads the board game rather than referencing it, so an unknown id is
         // reported as BOARD_GAME_NOT_FOUND instead of surfacing as a raw fk_tournament_board_game
         // violation once the change is flushed.
-        Long boardGameId = createBoardGame();
-        long id = createTournament(boardGameId, "test_tournament_name");
+        Long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name");
 
         putTournament(id, Long.MAX_VALUE, "test_tournament_name", TournamentStatus.DRAFT)
                 .andExpect(status().isNotFound())
@@ -608,8 +577,8 @@ class TournamentControllerTest {
     void updateTournamentClearsOmittedOptionalFields() throws Exception {
         // PUT replaces the whole resource: an omitted optional field is cleared, not preserved.
         // Guarding the setters with null checks would quietly turn this endpoint into a PATCH.
-        long boardGameId = createBoardGame();
-        long id = createTournament(boardGameId,
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId,
                 "test_tournament_name",
                 16,
                 LocalDate.of(2000, 1, 1),
@@ -627,7 +596,7 @@ class TournamentControllerTest {
     void updateTournamentNotFound() throws Exception {
         // A real board game id, so a reordering that resolved the game before the tournament
         // would still be reported here as the tournament being missing.
-        long boardGameId = createBoardGame();
+        long boardGameId = boardGames.create();
 
         putTournament(Long.MAX_VALUE, boardGameId, "test_tournament_name", TournamentStatus.DRAFT)
                 .andExpect(status().isNotFound())
@@ -640,8 +609,8 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when renaming a tournament that has been closed")
     void updateTournamentLockedWhenClosed() throws Exception {
-        long boardGameId = createBoardGame();
-        long id = createTournament(boardGameId, "test_tournament_name");
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name");
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
                 .andExpect(status().isOk());
@@ -664,8 +633,8 @@ class TournamentControllerTest {
         // A full-replace client reads a tournament, changes nothing and writes it back.
         // Re-sending the current values is not an edit, so the lock must not turn that into a
         // conflict -- the same rule changeBoardGame() follows.
-        long boardGameId = createBoardGame();
-        long id = createTournament(boardGameId, "test_tournament_name");
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name");
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.CANCELLED)
                 .andExpect(status().isOk());
@@ -682,8 +651,8 @@ class TournamentControllerTest {
         // replaceDetails() validates against the status the request arrived with, so an open
         // tournament can still be corrected by the very call that cancels it. Applying the
         // transition first would reject this request against CANCELLED.
-        long boardGameId = createBoardGame();
-        long id = createTournament(boardGameId, "test_tournament_name");
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name");
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
                 .andExpect(status().isOk());
@@ -705,8 +674,8 @@ class TournamentControllerTest {
         // follow-up read is a fresh query. Inside the test transaction the row would only be
         // removed from the persistence context, and a database-level refusal -- a future
         // registrations FK with ON DELETE RESTRICT -- would never surface here.
-        Long boardGameId = createBoardGame();
-        long id = createTournament(boardGameId, "test_tournament_name");
+        Long boardGameId = boardGames.create("test_board_game_name");
+        long id = tournaments.create(boardGameId, "test_tournament_name");
 
         mockMvc.perform(delete("/api/v1/tournaments/{id}", id))
                 .andExpect(status().isNoContent());
@@ -720,8 +689,8 @@ class TournamentControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when deleting a tournament that is no longer a draft")
     void deleteTournamentThatIsNoLongerADraft() throws Exception {
-        long boardGameId = createBoardGame();
-        long id = createTournament(boardGameId, "test_tournament_name");
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name");
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN)
                 .andExpect(status().isOk());
@@ -793,52 +762,5 @@ class TournamentControllerTest {
                         {"boardGameId":"%d", "name":"%s"}
                         """.formatted(boardGameId, name)));
     }
-
-    private long createTournament(Long boardGameId, String name, int maxPlayers, LocalDate startsOn, LocalDate endsOn) throws Exception {
-        MockHttpServletResponse response = postTournament(boardGameId,
-                name,
-                maxPlayers,
-                startsOn,
-                endsOn)
-                .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
-    }
-
-    private long createTournament(Long boardGameId, String name) throws Exception {
-        MockHttpServletResponse response = postTournament(boardGameId, name)
-                .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
-    }
-
-    private long createBoardGame() throws Exception {
-        MockHttpServletResponse response = mockMvc.perform(post("/api/v1/boardgames")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"test_board_game_name", "minPlayers":"1", "maxPlayers":"4"}
-                                """))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
-    }
-
-    private long createBoardGame(String name) throws Exception {
-        MockHttpServletResponse response = mockMvc.perform(post("/api/v1/boardgames")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"%s", "minPlayers":"1", "maxPlayers":"4"}
-                                """.formatted(name)))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
-
-        return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
-    }
-
 
 }
