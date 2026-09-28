@@ -44,15 +44,21 @@ class BoardGameControllerTest {
     @Test
     @DisplayName("should create a new board game when valid data is provided")
     void createBoardGame() throws Exception {
-        postBoardGame("test_board_game_name", 1, 6, 45)
+        MockHttpServletResponse response = postBoardGame("test_board_game_name", 1, 6, 45)
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.minPlayers").value(1))
                 .andExpect(jsonPath("$.maxPlayers").value(6))
                 .andExpect(jsonPath("$.avgDurationMin").value(45))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.updatedAt").isNotEmpty())
+                .andReturn().getResponse();
+
+        int id = ((Number) JsonPath.read(response.getContentAsString(), "$.id")).intValue();
+
+        assertThat(response.getHeader("Location"))
+                .as("Location of the created board game")
+                .isEqualTo("http://localhost/api/v1/boardgames/%d".formatted(id));
     }
 
     @Test
@@ -60,7 +66,6 @@ class BoardGameControllerTest {
     void createBoardGameWithCaseSensitiveName() throws Exception {
         postBoardGame("test_board_game_name_CASE", 1, 6, 45)
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.name").value("test_board_game_name_CASE"))
                 .andExpect(jsonPath("$.minPlayers").value(1))
                 .andExpect(jsonPath("$.maxPlayers").value(6))
@@ -74,7 +79,6 @@ class BoardGameControllerTest {
     void createBoardGameWithNoAverageDuration() throws Exception {
         postBoardGame("test_board_game_name", 1, 6)
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.minPlayers").value(1))
                 .andExpect(jsonPath("$.maxPlayers").value(6))

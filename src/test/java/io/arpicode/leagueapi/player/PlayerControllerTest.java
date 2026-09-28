@@ -42,13 +42,19 @@ class PlayerControllerTest {
     @Test
     @DisplayName("should create a new player when valid data is provided")
     void createPlayer() throws Exception {
-        postPlayer("test_user", "test_user@example.com")
+        MockHttpServletResponse response = postPlayer("test_user", "test_user@example.com")
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.username").value("test_user"))
                 .andExpect(jsonPath("$.email").value("test_user@example.com"))
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+                .andExpect(jsonPath("$.updatedAt").isNotEmpty())
+                .andReturn().getResponse();
+
+        int id = ((Number) JsonPath.read(response.getContentAsString(), "$.id")).intValue();
+
+        assertThat(response.getHeader("Location"))
+                .as("Location of the created player")
+                .isEqualTo("http://localhost/api/v1/players/%d".formatted(id));
     }
 
     @Test

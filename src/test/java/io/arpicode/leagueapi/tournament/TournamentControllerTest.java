@@ -51,13 +51,12 @@ class TournamentControllerTest {
     void createTournament() throws Exception {
         Long boardGameId = boardGames.create("test_board_game_name");
 
-        MockHttpServletResponse createResponse = postTournament(boardGameId,
+        MockHttpServletResponse response = postTournament(boardGameId,
                 "test_tournament_name",
                 16,
                 LocalDate.of(2000, 1, 1),
                 LocalDate.of(2000, 1, 1))
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
                 .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.name").value("test_tournament_name"))
@@ -69,10 +68,16 @@ class TournamentControllerTest {
                 .andExpect(jsonPath("$.updatedAt").isNotEmpty())
                 .andReturn().getResponse();
 
-        String createdAt = JsonPath.read(createResponse.getContentAsString(), "$.createdAt");
-        String updatedAt = JsonPath.read(createResponse.getContentAsString(), "$.updatedAt");
+        String createdAt = JsonPath.read(response.getContentAsString(), "$.createdAt");
+        String updatedAt = JsonPath.read(response.getContentAsString(), "$.updatedAt");
 
         assertThat(OffsetDateTime.parse(createdAt)).isEqualTo(OffsetDateTime.parse(updatedAt));
+
+        int id = ((Number) JsonPath.read(response.getContentAsString(), "$.id")).intValue();
+
+        assertThat(response.getHeader("Location"))
+                .as("Location of the created tournament")
+                .isEqualTo("http://localhost/api/v1/tournaments/%d".formatted(id));
     }
 
     @Test
@@ -86,7 +91,6 @@ class TournamentControllerTest {
                 LocalDate.of(2000, 1, 1),
                 LocalDate.of(2000, 1, 1))
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
                 .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.name").value("test_tournament_name_CASE"))
@@ -106,7 +110,6 @@ class TournamentControllerTest {
         postTournament(boardGameId,
                 "test_tournament_name")
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
                 .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.name").value("test_tournament_name"))
@@ -128,7 +131,6 @@ class TournamentControllerTest {
                 LocalDate.of(2000, 1, 1),
                 null)
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.boardGame.id").value(boardGameId))
                 .andExpect(jsonPath("$.boardGame.name").value("test_board_game_name"))
                 .andExpect(jsonPath("$.name").value("test_tournament_name"))
