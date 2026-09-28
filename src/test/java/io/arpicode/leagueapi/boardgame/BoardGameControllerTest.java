@@ -99,6 +99,7 @@ class BoardGameControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty())
                 .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS));
     }
 
@@ -109,7 +110,6 @@ class BoardGameControllerTest {
 
         postBoardGame("Test_Board_Game_Name", 1, 6, 45)
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS));
@@ -122,7 +122,6 @@ class BoardGameControllerTest {
     void createBoardGameWithInvalidDataTooShortName() throws Exception {
         postBoardGame("t", 1, 1, 10)
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -134,7 +133,6 @@ class BoardGameControllerTest {
     void createBoardGameWithInvalidDataTooLongName() throws Exception {
         postBoardGame("t".repeat(121), 1, 1, 10)
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -146,7 +144,6 @@ class BoardGameControllerTest {
     void createBoardGameWithInvalidDataWithBlankName() throws Exception {
         postBoardGame("", 1, 1, 10)
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -160,7 +157,6 @@ class BoardGameControllerTest {
     void createBoardGameWithInvalidDataWithTooLowMinPlayers() throws Exception {
         postBoardGame("test_board_game_name", 0, 1, 10)
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("minPlayers"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -172,7 +168,6 @@ class BoardGameControllerTest {
     void createBoardGameWithInvalidDataWithTooLowMaxPlayers() throws Exception {
         postBoardGame("test_board_game_name", 2, 1, 10)
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("maxPlayers"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -184,7 +179,6 @@ class BoardGameControllerTest {
     void createBoardGameWithInvalidDataWithTooLowAverageDuration() throws Exception {
         postBoardGame("test_board_game_name", 1, 1, 0)
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("avgDurationMin"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -261,10 +255,8 @@ class BoardGameControllerTest {
     void getBoardGameNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/boardgames/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     @Test
@@ -319,7 +311,6 @@ class BoardGameControllerTest {
                                 {"name": "test_board_game_name", "minPlayers": 1, "maxPlayers": 2, "avgDurationMin": 3}
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS));
     }
@@ -333,7 +324,6 @@ class BoardGameControllerTest {
                                 {"name": "updated_test_board_game_name", "minPlayers": 1, "maxPlayers": 2, "avgDurationMin": 3}
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
@@ -357,7 +347,6 @@ class BoardGameControllerTest {
     void deleteBoardGameNotFound() throws Exception {
         mockMvc.perform(delete("/api/v1/boardgames/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }

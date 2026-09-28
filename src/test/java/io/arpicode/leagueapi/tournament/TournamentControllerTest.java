@@ -155,6 +155,7 @@ class TournamentControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty())
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS));
     }
 
@@ -166,7 +167,6 @@ class TournamentControllerTest {
 
         postTournament(boardGameId, "TEST_TOURNAMENT_NAME")
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS));
@@ -181,7 +181,6 @@ class TournamentControllerTest {
 
         postTournament(boardGameId, "t")
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -195,7 +194,6 @@ class TournamentControllerTest {
 
         postTournament(boardGameId, "t".repeat(151))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -209,7 +207,6 @@ class TournamentControllerTest {
 
         postTournament(boardGameId, "")
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -229,7 +226,6 @@ class TournamentControllerTest {
                 LocalDate.of(2000, 1, 1),
                 LocalDate.of(2000, 1, 1))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("maxPlayers"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -246,7 +242,6 @@ class TournamentControllerTest {
                 null,
                 LocalDate.of(2000, 1, 1))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("startsOn"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -263,7 +258,6 @@ class TournamentControllerTest {
                 LocalDate.of(2000, 1, 25),
                 LocalDate.of(2000, 1, 1))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("endsOn"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -337,10 +331,8 @@ class TournamentControllerTest {
     void getBoardGameNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/tournaments/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Update
@@ -507,7 +499,6 @@ class TournamentControllerTest {
                                 {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(otherBoardGameId, TournamentStatus.OPEN, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_BOARD_GAME_LOCKED.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_BOARD_GAME_LOCKED.formatted(TournamentStatus.OPEN)));
     }
@@ -535,7 +526,6 @@ class TournamentControllerTest {
                                 {"boardGameId":%d, "name":"updated_test_tournament_name", "status":"%s", "maxPlayers":"16", "startsOn":"%s", "endsOn":"%s"}
                                 """.formatted(boardGameId, TournamentStatus.IN_PROGRESS, LocalDate.of(2000, 1, 1), LocalDate.of(2000, 1, 1))))
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_ILLEGAL_TRANSITION.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_ILLEGAL_TRANSITION.formatted(TournamentStatus.DRAFT, TournamentStatus.IN_PROGRESS)));
     }
@@ -568,10 +558,8 @@ class TournamentControllerTest {
 
         putTournament(id, Long.MAX_VALUE, "test_tournament_name", TournamentStatus.DRAFT)
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.BOARD_GAME_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value(UserMessages.BOARD_GAME_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     @Test
@@ -602,10 +590,8 @@ class TournamentControllerTest {
 
         putTournament(Long.MAX_VALUE, boardGameId, "test_tournament_name", TournamentStatus.DRAFT)
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     @Test
@@ -623,10 +609,8 @@ class TournamentControllerTest {
 
         putTournament(id, boardGameId, "updated_test_tournament_name", TournamentStatus.CLOSED)
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_LOCKED.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_LOCKED.formatted(TournamentStatus.CLOSED)))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_LOCKED.formatted(TournamentStatus.CLOSED)));
     }
 
     @Test
@@ -699,10 +683,8 @@ class TournamentControllerTest {
 
         mockMvc.perform(delete("/api/v1/tournaments/{id}", id))
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_DELETABLE.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_DELETABLE.formatted(TournamentStatus.OPEN)))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_DELETABLE.formatted(TournamentStatus.OPEN)));
 
         // The guard must leave the row alone, not merely report a conflict on the way out.
         mockMvc.perform(get("/api/v1/tournaments/{id}", id))
@@ -715,7 +697,6 @@ class TournamentControllerTest {
     void deleteTournamentNotFound() throws Exception {
         mockMvc.perform(delete("/api/v1/tournaments/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }

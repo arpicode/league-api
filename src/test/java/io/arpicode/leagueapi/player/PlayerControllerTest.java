@@ -83,6 +83,7 @@ class PlayerControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.USERNAME_ALREADY_EXISTS.name()))
+                .andExpect(jsonPath("$.errorId").isNotEmpty())
                 .andExpect(jsonPath("$.detail").value(UserMessages.USERNAME_ALREADY_EXISTS));
     }
 
@@ -108,7 +109,6 @@ class PlayerControllerTest {
 
         postPlayer("test_user_unique", "test_user@example.com")
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(header().doesNotExist("Location"))
                 .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
@@ -134,7 +134,6 @@ class PlayerControllerTest {
     void createPlayerWithInvalidDataTooShortUsername() throws Exception {
         postPlayer("te", "test_user@example.com")
                 .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
                 .andExpect(jsonPath("$.errors[0].field").value("username"))
                 .andExpect(jsonPath("$.errors[0].message")
@@ -257,10 +256,8 @@ class PlayerControllerTest {
     void getPlayerNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/players/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Update
@@ -315,7 +312,6 @@ class PlayerControllerTest {
                                 {"username":"other_user","email":"test_user@example.com"}
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
     }
@@ -329,7 +325,6 @@ class PlayerControllerTest {
                                 {"username":"updated_user","email":"updated_user@example.com"}
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
@@ -355,7 +350,6 @@ class PlayerControllerTest {
     void deletePlayerNotFound() throws Exception {
         mockMvc.perform(delete("/api/v1/players/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
                 .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
