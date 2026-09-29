@@ -2,6 +2,7 @@ package io.arpicode.leagueapi.tournament;
 
 import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.ApiIntegrationTest;
+import io.arpicode.leagueapi.CommitsData;
 import io.arpicode.leagueapi.boardgame.BoardGameFixtures;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
@@ -10,10 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -28,14 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ApiIntegrationTest
 @Transactional
 class TournamentControllerTest {
-
-    // Matches on the generated name_normalized rather than name, so a row committed under a
-    // different casing by a failing test is removed too.
-    private static final String CLEANUP_TOURNAMENTS =
-            "DELETE FROM league.tournament WHERE name_normalized IN ('test_tournament_name', 'updated_test_tournament_name', 'test_other_tournament_name')";
-    private static final String CLEANUP_BOARD_GAMES =
-            "DELETE FROM league.board_game WHERE name_normalized IN ('test_board_game_name', 'test_other_board_game')";
-
 
     @Autowired
     MockMvc mockMvc;
@@ -311,8 +302,7 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should update an existing tournament when valid data is provided")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void updateTournament() throws Exception {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
@@ -354,8 +344,7 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should update an existing tournament that has a draft status when valid data is provided")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void updateTournamentInDraftStatus() throws Exception {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
@@ -397,8 +386,7 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should allow changing the board game on a tournament that has a draft status")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void changeBoardGameOnDraftTournament() throws Exception {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
@@ -441,8 +429,7 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when changing the board game on a tournament that has a open status")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void changeBoardGameOnOpenTournament() throws Exception {
         Long boardGameId = boardGames.create("test_board_game_name");
         Long otherBoardGameId = boardGames.create("test_other_board_game");
@@ -477,8 +464,7 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when transitioning to an illegal status")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void transitionToIllegalStatus() throws Exception {
         Long boardGameId = boardGames.create("test_board_game_name");
 
@@ -625,8 +611,7 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should delete a tournament that is still a draft")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = {CLEANUP_TOURNAMENTS, CLEANUP_BOARD_GAMES}, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void deleteDraftTournament() throws Exception {
         // Committed rather than rolled back, so the DELETE really reaches Postgres and the
         // follow-up read is a fresh query. Inside the test transaction the row would only be

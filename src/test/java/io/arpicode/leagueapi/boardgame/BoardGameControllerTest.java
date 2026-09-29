@@ -2,6 +2,7 @@ package io.arpicode.leagueapi.boardgame;
 
 import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.ApiIntegrationTest;
+import io.arpicode.leagueapi.CommitsData;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.junit.jupiter.api.DisplayName;
@@ -9,10 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -26,12 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ApiIntegrationTest
 @Transactional
 class BoardGameControllerTest {
-
-    // Matches on the generated name_normalized rather than name, so a row committed under a
-    // different casing by a failing test is removed too.
-    private static final String CLEANUP =
-            "DELETE FROM league.board_game WHERE name_normalized IN ('test_board_game_name', 'updated_test_board_game_name', 'test_other_board_game_name')";
-
 
     @Autowired
     MockMvc mockMvc;
@@ -243,8 +236,7 @@ class BoardGameControllerTest {
 
     @Test
     @DisplayName("should update an existing board game when valid data is provided")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void updateBoardGame() throws Exception {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
@@ -280,8 +272,7 @@ class BoardGameControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when updating a board game to a name another board game already uses")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void updateBoardGameWithDuplicateName() throws Exception {
         boardGames.create("test_board_game_name", 1, 2, 3);
         long otherId = boardGames.create("test_other_board_game_name", 1, 2, 3);

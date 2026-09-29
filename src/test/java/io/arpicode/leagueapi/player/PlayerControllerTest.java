@@ -2,6 +2,7 @@ package io.arpicode.leagueapi.player;
 
 import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.ApiIntegrationTest;
+import io.arpicode.leagueapi.CommitsData;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.junit.jupiter.api.DisplayName;
@@ -9,10 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -25,11 +24,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ApiIntegrationTest
 @Transactional
 class PlayerControllerTest {
-
-    // Matches on the generated username_normalized rather than username, so a row committed under a
-    // different casing by a failing test is removed too.
-    private static final String CLEANUP =
-            "DELETE FROM league.player WHERE username_normalized IN ('test_user', 'other_user', 'updated_user')";
 
     @Autowired
     MockMvc mockMvc;
@@ -73,8 +67,7 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when trying to create a player with duplicate username")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void createPlayerWithDuplicateUsername() throws Exception {
         players.create("test_user", "test_user@example.com");
 
@@ -88,8 +81,7 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict for a duplicate username differing only by case")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void createPlayerWithDuplicateUsernameCaseInsensitive() throws Exception {
         players.create("test_user", "test_user@example.com");
 
@@ -101,8 +93,7 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when trying to create a player with duplicate email")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void createPlayerWithDuplicateEmail() throws Exception {
         players.create("test_user", "test_user@example.com");
 
@@ -114,8 +105,7 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict for a duplicate email differing only by case")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void createPlayerWithDuplicateEmailCaseInsensitive() throws Exception {
         players.create("test_user", "test_user@example.com");
 
@@ -262,8 +252,7 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should update an existing player when valid data is provided")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void updatePlayer() throws Exception {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
@@ -297,8 +286,7 @@ class PlayerControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when updating a player to an email another player already uses")
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @Sql(statements = CLEANUP, executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @CommitsData
     void updatePlayerWithDuplicateEmail() throws Exception {
         players.create("test_user", "test_user@example.com");
         long otherId = players.create("other_user", "other_user@example.com");
