@@ -307,7 +307,7 @@ class TournamentControllerTest {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
         // make updatedAt look unchanged even when the update trigger fires correctly.
-        Long boardGameId = boardGames.create("test_board_game_name");
+        Long boardGameId = boardGames.create();
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -349,7 +349,7 @@ class TournamentControllerTest {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
         // make updatedAt look unchanged even when the update trigger fires correctly.
-        Long boardGameId = boardGames.create("test_board_game_name");
+        Long boardGameId = boardGames.create();
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -391,8 +391,8 @@ class TournamentControllerTest {
         // Create and update each commit in their own transaction (like real requests do),
         // since Postgres now() is frozen for the life of a transaction and would otherwise
         // make updatedAt look unchanged even when the update trigger fires correctly.
-        Long boardGameId = boardGames.create("test_board_game_name");
-        Long otherBoardGameId = boardGames.create("test_other_board_game");
+        Long boardGameId = boardGames.create();
+        Long otherBoardGameId = boardGames.create();
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -429,10 +429,9 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when changing the board game on a tournament that has a open status")
-    @CommitsData
     void changeBoardGameOnOpenTournament() throws Exception {
-        Long boardGameId = boardGames.create("test_board_game_name");
-        Long otherBoardGameId = boardGames.create("test_other_board_game");
+        Long boardGameId = boardGames.create();
+        Long otherBoardGameId = boardGames.create();
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -464,9 +463,8 @@ class TournamentControllerTest {
 
     @Test
     @DisplayName("should return 409 Conflict when transitioning to an illegal status")
-    @CommitsData
     void transitionToIllegalStatus() throws Exception {
-        Long boardGameId = boardGames.create("test_board_game_name");
+        Long boardGameId = boardGames.create();
 
         MockHttpServletResponse createResponse = postTournament(
                 boardGameId,
@@ -617,8 +615,7 @@ class TournamentControllerTest {
         // follow-up read is a fresh query. Inside the test transaction the row would only be
         // removed from the persistence context, and a database-level refusal -- a future
         // registrations FK with ON DELETE RESTRICT -- would never surface here.
-        Long boardGameId = boardGames.create("test_board_game_name");
-        long id = tournaments.create(boardGameId, "test_tournament_name");
+        long id = tournaments.createDraft();
 
         mockMvc.perform(delete("/api/v1/tournaments/{id}", id))
                 .andExpect(status().isNoContent());

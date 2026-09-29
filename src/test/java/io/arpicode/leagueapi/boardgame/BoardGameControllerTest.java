@@ -274,8 +274,8 @@ class BoardGameControllerTest {
     @DisplayName("should return 409 Conflict when updating a board game to a name another board game already uses")
     @CommitsData
     void updateBoardGameWithDuplicateName() throws Exception {
-        boardGames.create("test_board_game_name", 1, 2, 3);
-        long otherId = boardGames.create("test_other_board_game_name", 1, 2, 3);
+        boardGames.create("test_board_game_name");
+        long otherId = boardGames.create();
 
         // Different code path from create: the violation surfaces at saveAndFlush, not persist.
         mockMvc.perform(put("/api/v1/boardgames/{id}", otherId)
