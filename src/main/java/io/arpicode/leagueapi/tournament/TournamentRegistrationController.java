@@ -3,6 +3,9 @@ package io.arpicode.leagueapi.tournament;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationCreateRequest;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationResponse;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -35,6 +38,15 @@ public class TournamentRegistrationController {
         return ResponseEntity
                 .created(location)
                 .body(saved);
+    }
+
+    // V009's order by default: registered_at alone can tie, and a sort without a unique last key
+    // lets rows repeat or go missing between pages.
+    @GetMapping("/{id}/registrations")
+    public PagedModel<TournamentRegistrationResponse> list(
+            @PathVariable long id,
+            @PageableDefault(sort = {"registeredAt", "id.playerId"}) Pageable pageable) {
+        return new PagedModel<>(tournamentRegistrationService.list(id, pageable));
     }
 
     @GetMapping("/{id}/registrations/{playerId}")
