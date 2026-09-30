@@ -26,6 +26,11 @@ public interface TournamentRegistrationRepository extends JpaRepository<Tourname
 
     long countByStatusAndTournamentId(TournamentRegistrationStatus status, Long tournamentId);
 
+    // The head of the waitlist, in the same order findWaitlistPosition ranks it: registered_at, then
+    // player_id to break ties. Empty when the tournament has no waitlist.
+    Optional<TournamentRegistration> findFirstByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
+            Long tournamentId, TournamentRegistrationStatus status);
+
     // A waitlisted registration's position is its rank in the order V009 defines: registered_at,
     // then player_id to break ties. Empty when the player is not on the tournament's waitlist.
     @Query(value = """

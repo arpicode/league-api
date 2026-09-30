@@ -22,6 +22,7 @@ public final class UserMessages {
     public static final String TOURNAMENT_NOT_DELETABLE = "Tournament can't be deleted once status is %s, cancel it instead";
 
     public static final String TOURNAMENT_NOT_OPEN = "Tournament status must be OPEN to register. Current status is %s";
+    public static final String TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL = "Tournament status must be OPEN to withdraw. Current status is %s";
     public static final String TOURNAMENT_REGISTRATION_PLAYER_ALREADY_REGISTERED = "Player of id %d is already registered for tournament of id %d";
     public static final String TOURNAMENT_REGISTRATION_ALREADY_EXISTS = "Tournament registration already exists";
     public static final String TOURNAMENT_REGISTRATION_NOT_FOUND = "Player of id %d is not registered for tournament of id %d";

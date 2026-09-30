@@ -103,6 +103,17 @@ public class Tournament {
         }
     }
 
+    // The roster is fixed once the tournament leaves OPEN, so withdrawing is only allowed while it
+    // is. Same locking caveat as assertOpenForRegistration().
+    public void assertOpenForWithdrawal() {
+        if (this.status != TournamentStatus.OPEN) {
+            throw new BusinessException(
+                    ErrorCode.TOURNAMENT_NOT_OPEN,
+                    UserMessages.TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL.formatted(this.getStatus())
+            );
+        }
+    }
+
     // A tournament that has been played out or called off is a historical record: what the
     // league actually ran cannot be rewritten afterwards, so every editable field is frozen
     // together once the status is terminal. Re-sending the current values is not a change, so

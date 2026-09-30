@@ -109,6 +109,36 @@ public class TournamentRegistrationService {
         ));
     }
 
+    // Takes the same lock as create, so withdrawals, registrations and promotions on one tournament
+    // run one at a time: otherwise a registration can waitlist itself for a place a concurrent
+    // withdrawal is freeing, or two withdrawals can both promote the same waitlisted row. The lock
+    // comes before the registration is loaded, so its status is read after any such race settles.
+    @Transactional
+    public void delete(long tournamentId, long playerId) {
+        Tournament tournament = findTournamentForUpdate(tournamentId);
+
+        tournament.assertOpenForWithdrawal();
+
+        // The lock just proved the tournament exists, so a miss here can only be the registration.
+        TournamentRegistration tournamentRegistration = tournamentRegistrationRepository
+                .findById(new TournamentPlayerId(tournamentId, playerId))
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND,
+                        UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)
+                ));
+
+        boolean freesAPlace = tournamentRegistration.isConfirmed();
+
+        tournamentRegistrationRepository.delete(tournamentRegistration);
+
+        if (freesAPlace) {
+            tournamentRegistrationRepository
+                    .findFirstByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
+                            tournamentId, TournamentRegistrationStatus.WAITLISTED)
+                    .ifPresent(TournamentRegistration::promote);
+        }
+    }
+
     // The tournament is the parent resource in the URL, so a missing one is reported as such rather
     // than as a missing registration. It is only looked up on this path, sparing the happy path a query.
     private BusinessException registrationNotFound(long tournamentId, long playerId) {
