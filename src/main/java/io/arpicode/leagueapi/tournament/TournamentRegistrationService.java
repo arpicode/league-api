@@ -9,6 +9,7 @@ import io.arpicode.leagueapi.shared.error.UserMessages;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationCreateRequest;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -62,6 +63,50 @@ public class TournamentRegistrationService {
         TournamentRegistration saved = tournamentRegistrationRepository.saveAndFlush(tournamentRegistration);
 
         return toTournamentRegistrationResponse(saved, player, waitlistPosition);
+    }
+
+    // Repeatable read runs both queries on one snapshot, so a registration read as WAITLISTED is still
+    // on the waitlist when its position is computed, even if it is promoted or withdrawn in between.
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public TournamentRegistrationResponse getById(long tournamentId, long playerId) {
+        TournamentRegistration tournamentRegistration = tournamentRegistrationRepository
+                .findById(new TournamentPlayerId(tournamentId, playerId))
+                .orElseThrow(() -> registrationNotFound(tournamentId, playerId));
+
+        return toTournamentRegistrationResponse(
+                tournamentRegistration,
+                tournamentRegistration.getPlayer(),
+                waitlistPosition(tournamentRegistration)
+        );
+    }
+
+    // The tournament is the parent resource in the URL, so a missing one is reported as such rather
+    // than as a missing registration. It is only looked up on this path, sparing the happy path a query.
+    private BusinessException registrationNotFound(long tournamentId, long playerId) {
+        if (!tournamentRepository.existsById(tournamentId)) {
+            return new BusinessException(
+                    ErrorCode.TOURNAMENT_NOT_FOUND,
+                    UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
+            );
+        }
+        return new BusinessException(
+                ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND,
+                UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)
+        );
+    }
+
+    private Integer waitlistPosition(TournamentRegistration tournamentRegistration) {
+        if (tournamentRegistration.isConfirmed()) {
+            return null;
+        }
+
+        TournamentPlayerId id = tournamentRegistration.getId();
+        long position = tournamentRegistrationRepository
+                .findWaitlistPosition(id.getTournamentId(), id.getPlayerId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Registration (tournament %d, player %d) is WAITLISTED but has no waitlist position"
+                                .formatted(id.getTournamentId(), id.getPlayerId())));
+        return Math.toIntExact(position);
     }
 
     private TournamentRegistrationResponse toTournamentRegistrationResponse(TournamentRegistration tournamentRegistration, Player player, Integer waitlistPosition) {

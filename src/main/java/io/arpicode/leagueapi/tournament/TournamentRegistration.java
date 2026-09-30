@@ -64,6 +64,10 @@ public class TournamentRegistration implements Persistable<TournamentPlayerId> {
         status = TournamentRegistrationStatus.CONFIRMED;
     }
 
+    public boolean isConfirmed() {
+        return status == TournamentRegistrationStatus.CONFIRMED;
+    }
+
     @Override
     public boolean isNew() {
         return isNew;
