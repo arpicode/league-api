@@ -14,15 +14,23 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 public class TournamentService {
 
     private final TournamentRepository tournamentRepository;
     private final BoardGameRepository boardGameRepository;
+    private final TournamentRegistrationService tournamentRegistrationService;
 
-    public TournamentService(TournamentRepository tournamentRepository, BoardGameRepository boardGameRepository) {
+    public TournamentService(
+            TournamentRepository tournamentRepository,
+            BoardGameRepository boardGameRepository,
+            TournamentRegistrationService tournamentRegistrationService
+    ) {
         this.tournamentRepository = tournamentRepository;
         this.boardGameRepository = boardGameRepository;
+        this.tournamentRegistrationService = tournamentRegistrationService;
     }
 
     @Transactional
@@ -59,13 +67,16 @@ public class TournamentService {
         return toTournamentResponse(tournament);
     }
 
+    // Locked like a registration or a withdrawal: a new maxPlayers is checked against the roster and
+    // filled from its waitlist, and those two change it concurrently otherwise.
     @Transactional
     public TournamentResponse update(long id, TournamentUpdateRequest tournamentUpdateRequest) {
-        Tournament tournament = tournamentRepository.findById(id)
+        Tournament tournament = tournamentRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.TOURNAMENT_NOT_FOUND,
                         UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
         BoardGame boardGame = findBoardGame(tournamentUpdateRequest.boardGameId());
+        Short previousMaxPlayers = tournament.getMaxPlayers();
 
         // Order matters: every field change is validated against the status the request arrived
         // with, so the transition is applied last. Repointing a DRAFT tournament while opening
@@ -77,6 +88,9 @@ public class TournamentService {
                 tournamentUpdateRequest.maxPlayers(),
                 tournamentUpdateRequest.startsOn(),
                 tournamentUpdateRequest.endsOn());
+        if (!Objects.equals(previousMaxPlayers, tournament.getMaxPlayers())) {
+            tournamentRegistrationService.applyMaxPlayersChange(tournament);
+        }
         tournament.transitionTo(tournamentUpdateRequest.status());
 
         tournamentRepository.saveAndFlush(tournament);

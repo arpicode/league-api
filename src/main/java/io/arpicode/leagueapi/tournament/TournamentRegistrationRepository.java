@@ -1,6 +1,7 @@
 package io.arpicode.leagueapi.tournament;
 
 import lombok.NonNull;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -27,9 +28,9 @@ public interface TournamentRegistrationRepository extends JpaRepository<Tourname
     long countByStatusAndTournamentId(TournamentRegistrationStatus status, Long tournamentId);
 
     // The head of the waitlist, in the same order findWaitlistPosition ranks it: registered_at, then
-    // player_id to break ties. Empty when the tournament has no waitlist.
-    Optional<TournamentRegistration> findFirstByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
-            Long tournamentId, TournamentRegistrationStatus status);
+    // player_id to break ties. The limit is the number of places being filled.
+    List<TournamentRegistration> findByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
+            Long tournamentId, TournamentRegistrationStatus status, Limit limit);
 
     // A waitlisted registration's position is its rank in the order V009 defines: registered_at,
     // then player_id to break ties. Empty when the player is not on the tournament's waitlist.

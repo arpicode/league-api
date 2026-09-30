@@ -8,6 +8,7 @@ import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationCreateRequest;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationResponse;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -132,11 +133,37 @@ public class TournamentRegistrationService {
         tournamentRegistrationRepository.delete(tournamentRegistration);
 
         if (freesAPlace) {
-            tournamentRegistrationRepository
-                    .findFirstByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
-                            tournamentId, TournamentRegistrationStatus.WAITLISTED)
-                    .ifPresent(TournamentRegistration::promote);
+            promoteFromWaitlist(tournamentId, Limit.of(1));
         }
+    }
+
+    // Fits the roster to a tournament's new maxPlayers. The caller must hold the tournament lock, as
+    // TournamentService.update does, or a registration could take a place between the count and the
+    // promotions. Raising the limit, or removing it, hands the new places to the waitlist, but only
+    // while OPEN: the roster is fixed from IN_PROGRESS.
+    public void applyMaxPlayersChange(Tournament tournament) {
+        long confirmedCount = tournamentRegistrationRepository
+                .countByStatusAndTournamentId(TournamentRegistrationStatus.CONFIRMED, tournament.getId());
+
+        tournament.assertMaxPlayersNotBelow(confirmedCount);
+
+        if (tournament.getStatus() != TournamentStatus.OPEN) {
+            return;
+        }
+
+        Short maxPlayers = tournament.getMaxPlayers();
+        if (maxPlayers == null) {
+            promoteFromWaitlist(tournament.getId(), Limit.unlimited());
+        } else if (confirmedCount < maxPlayers) {
+            promoteFromWaitlist(tournament.getId(), Limit.of(Math.toIntExact(maxPlayers - confirmedCount)));
+        }
+    }
+
+    private void promoteFromWaitlist(long tournamentId, Limit places) {
+        tournamentRegistrationRepository
+                .findByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
+                        tournamentId, TournamentRegistrationStatus.WAITLISTED, places)
+                .forEach(TournamentRegistration::promote);
     }
 
     // The tournament is the parent resource in the URL, so a missing one is reported as such rather
