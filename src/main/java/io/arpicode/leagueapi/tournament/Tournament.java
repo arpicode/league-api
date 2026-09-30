@@ -114,6 +114,17 @@ public class Tournament {
         }
     }
 
+    // Lowering the limit below the players already confirmed is refused rather than demoting any of
+    // them. Confirmed therefore never exceeds maxPlayers, so a withdrawal always frees a real place.
+    public void assertMaxPlayersNotBelow(long confirmedPlayers) {
+        if (maxPlayers != null && maxPlayers < confirmedPlayers) {
+            throw new BusinessException(
+                    ErrorCode.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED,
+                    UserMessages.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED.formatted(confirmedPlayers)
+            );
+        }
+    }
+
     // A tournament that has been played out or called off is a historical record: what the
     // league actually ran cannot be rewritten afterwards, so every editable field is frozen
     // together once the status is terminal. Re-sending the current values is not a change, so

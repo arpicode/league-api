@@ -20,6 +20,7 @@ public final class UserMessages {
     public static final String TOURNAMENT_BOARD_GAME_LOCKED = "Tournament board game can't be changed once status is %s";
     public static final String TOURNAMENT_LOCKED = "Tournament can't be modified once status is %s";
     public static final String TOURNAMENT_NOT_DELETABLE = "Tournament can't be deleted once status is %s, cancel it instead";
+    public static final String TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED = "Maximum players can't be lower than the %d players already confirmed";
 
     public static final String TOURNAMENT_NOT_OPEN = "Tournament status must be OPEN to register. Current status is %s";
     public static final String TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL = "Tournament status must be OPEN to withdraw. Current status is %s";
