@@ -58,7 +58,7 @@ class TournamentRegistrationControllerTest {
         long playerId = players.create();
         long tournamentAId = tournaments.createOpen(2);
         long tournamentBId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentBId, 2);
+        tournaments.registerNewPlayers(tournamentBId, 2);
 
         postRegistration(tournamentAId, playerId)
                 .andExpect(status().isCreated())
@@ -70,7 +70,7 @@ class TournamentRegistrationControllerTest {
     void createTournamentRegistrationWhenNotEnoughRoom() throws Exception {
         long playerId = players.create();
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 2);
+        tournaments.registerNewPlayers(tournamentId, 2);
 
         postRegistration(tournamentId, playerId)
                 .andExpect(status().isCreated())
@@ -177,7 +177,7 @@ class TournamentRegistrationControllerTest {
         // All registrations share registered_at inside this rolled-back transaction, so the player id
         // decides the order here: players created first rank first.
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 2);
+        tournaments.registerNewPlayers(tournamentId, 2);
 
         long firstPlayerId = players.create();
         long secondPlayerId = players.create();
@@ -199,10 +199,10 @@ class TournamentRegistrationControllerTest {
     void getTournamentWaitlistedRegistrationForTargetedTournament() throws Exception {
         // Its waitlisted player is created first, so it would rank ahead if the tournament were ignored.
         long otherTournamentId = tournaments.createOpen(2);
-        registerNewPlayers(otherTournamentId, 3);
+        tournaments.registerNewPlayers(otherTournamentId, 3);
 
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 2);
+        tournaments.registerNewPlayers(tournamentId, 2);
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
@@ -220,7 +220,7 @@ class TournamentRegistrationControllerTest {
         // Each registration commits in its own transaction, like real requests do, since Postgres
         // now() is frozen for the life of a transaction and would give both the same registered_at.
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 2);
+        tournaments.registerNewPlayers(tournamentId, 2);
 
         long lowerPlayerId = players.create();
         long higherPlayerId = players.create();
@@ -265,10 +265,10 @@ class TournamentRegistrationControllerTest {
     void listTournamentRegistrationsForTargetedTournament() throws Exception {
         // Its waitlisted player is created first, so it would rank ahead if the tournament were ignored.
         long otherTournamentId = tournaments.createOpen(2);
-        registerNewPlayers(otherTournamentId, 3);
+        tournaments.registerNewPlayers(otherTournamentId, 3);
 
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 2);
+        tournaments.registerNewPlayers(tournamentId, 2);
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
@@ -287,7 +287,7 @@ class TournamentRegistrationControllerTest {
         // Two confirmed and two waitlisted: with pages of three, the second waitlisted registration
         // is alone on the second page, where its rank within the page would be 1.
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 3);
+        tournaments.registerNewPlayers(tournamentId, 3);
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
@@ -303,7 +303,7 @@ class TournamentRegistrationControllerTest {
     @DisplayName("should keep waitlist positions in registration order whatever sort the client requests")
     void listTournamentRegistrationsSortedByClient() throws Exception {
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 3);
+        tournaments.registerNewPlayers(tournamentId, 3);
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
@@ -324,7 +324,7 @@ class TournamentRegistrationControllerTest {
         // Each registration commits in its own transaction, like real requests do, since Postgres
         // now() is frozen for the life of a transaction and would give both the same registered_at.
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 2);
+        tournaments.registerNewPlayers(tournamentId, 2);
 
         long lowerPlayerId = players.create();
         long higherPlayerId = players.create();
@@ -388,7 +388,7 @@ class TournamentRegistrationControllerTest {
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
                 .andExpect(status().isCreated());
-        registerNewPlayers(tournamentId, 1);
+        tournaments.registerNewPlayers(tournamentId, 1);
 
         long firstWaitlistedPlayerId = players.create();
         long secondWaitlistedPlayerId = players.create();
@@ -418,7 +418,7 @@ class TournamentRegistrationControllerTest {
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
                 .andExpect(status().isCreated());
-        registerNewPlayers(tournamentId, 1);
+        tournaments.registerNewPlayers(tournamentId, 1);
 
         long lowerPlayerId = players.create();
         long higherPlayerId = players.create();
@@ -440,7 +440,7 @@ class TournamentRegistrationControllerTest {
     void deleteWaitlistedTournamentRegistrationPromotesNobody() throws Exception {
         // A waitlisted withdrawal frees no place, so promoting the next in line would overbook.
         long tournamentId = tournaments.createOpen(2);
-        registerNewPlayers(tournamentId, 2);
+        tournaments.registerNewPlayers(tournamentId, 2);
 
         long withdrawingPlayerId = players.create();
         long remainingPlayerId = players.create();
@@ -462,13 +462,13 @@ class TournamentRegistrationControllerTest {
     void deleteConfirmedTournamentRegistrationPromotesFromTargetedTournament() throws Exception {
         // Its waitlisted player is created first, so it would be promoted if the tournament were ignored.
         long otherTournamentId = tournaments.createOpen(2);
-        registerNewPlayers(otherTournamentId, 3);
+        tournaments.registerNewPlayers(otherTournamentId, 3);
 
         long tournamentId = tournaments.createOpen(2);
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
                 .andExpect(status().isCreated());
-        registerNewPlayers(tournamentId, 1);
+        tournaments.registerNewPlayers(tournamentId, 1);
 
         long waitlistedPlayerId = players.create();
         postRegistration(tournamentId, waitlistedPlayerId)
@@ -520,6 +520,57 @@ class TournamentRegistrationControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
+    // -- Capacity changes
+
+    @Test
+    @DisplayName("should promote as many waitlisted registrations as a raised maximum frees, in rank order")
+    void raiseMaxPlayersPromotesWaitlistedRegistrations() throws Exception {
+        // All registrations share registered_at inside this rolled-back transaction, so the player id
+        // decides the order here: players created first rank first.
+        long tournamentId = tournaments.createOpen(2);
+        tournaments.registerNewPlayers(tournamentId, 2);
+
+        long firstWaitlistedPlayerId = players.create();
+        long secondWaitlistedPlayerId = players.create();
+        long thirdWaitlistedPlayerId = players.create();
+        postRegistration(tournamentId, firstWaitlistedPlayerId)
+                .andExpect(status().isCreated());
+        postRegistration(tournamentId, secondWaitlistedPlayerId)
+                .andExpect(status().isCreated());
+        postRegistration(tournamentId, thirdWaitlistedPlayerId)
+                .andExpect(status().isCreated());
+
+        tournaments.changeMaxPlayers(tournamentId, 4);
+
+        getRegistration(tournamentId, firstWaitlistedPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+        getRegistration(tournamentId, secondWaitlistedPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+        getRegistration(tournamentId, thirdWaitlistedPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
+    }
+
+    @Test
+    @DisplayName("should promote the whole waitlist when the maximum is removed")
+    void removeMaxPlayersPromotesWholeWaitlist() throws Exception {
+        long tournamentId = tournaments.createOpen(2);
+        tournaments.registerNewPlayers(tournamentId, 3);
+
+        // Created last, so last in line: promoted only if the whole waitlist is.
+        long lastWaitlistedPlayerId = players.create();
+        postRegistration(tournamentId, lastWaitlistedPlayerId)
+                .andExpect(status().isCreated());
+
+        tournaments.changeMaxPlayers(tournamentId, null);
+
+        getRegistration(tournamentId, lastWaitlistedPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+    }
+
     // -- Helpers
 
     private ResultActions postRegistration(long tournamentId, long playerId) throws Exception {
@@ -541,15 +592,6 @@ class TournamentRegistrationControllerTest {
     // Paging and sorting go in the query string as a client sends them, e.g. "page=1&size=3".
     private ResultActions listRegistrations(long tournamentId, String query) throws Exception {
         return mockMvc.perform(get("/api/v1/tournaments/{id}/registrations?" + query, tournamentId));
-    }
-
-    // Fills a tournament through the endpoint under test, one new player per registration. It stays
-    // here rather than in TournamentFixtures while no other feature's tests need registrations.
-    private void registerNewPlayers(long tournamentId, int count) throws Exception {
-        for (int i = 0; i < count; i++) {
-            postRegistration(tournamentId, players.create())
-                    .andExpect(status().isCreated());
-        }
     }
 
 }

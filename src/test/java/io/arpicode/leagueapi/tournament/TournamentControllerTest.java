@@ -605,6 +605,34 @@ class TournamentControllerTest {
                 .andExpect(jsonPath("$.status").value(TournamentStatus.CANCELLED.name()));
     }
 
+    @Test
+    @DisplayName("should return 409 Conflict when lowering the maximum players below the players already confirmed")
+    void updateTournamentMaxPlayersBelowConfirmedPlayers() throws Exception {
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name", 3, null, null);
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN, 3)
+                .andExpect(status().isOk());
+        tournaments.registerNewPlayers(id, 3);
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN, 2)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED.formatted(3)));
+    }
+
+    @Test
+    @DisplayName("should allow lowering the maximum players to exactly the players already confirmed")
+    void updateTournamentMaxPlayersToConfirmedPlayers() throws Exception {
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name", 4, null, null);
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN, 4)
+                .andExpect(status().isOk());
+        tournaments.registerNewPlayers(id, 3);
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN, 3)
+                .andExpect(status().isOk());
+    }
+
     // -- Delete
 
     @Test
@@ -663,6 +691,14 @@ class TournamentControllerTest {
                 .content("""
                         {"boardGameId":%d, "name":"%s", "status":"%s"}
                         """.formatted(boardGameId, name, status)));
+    }
+
+    private ResultActions putTournament(long id, long boardGameId, String name, TournamentStatus status, int maxPlayers) throws Exception {
+        return mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d}
+                        """.formatted(boardGameId, name, status, maxPlayers)));
     }
 
     private ResultActions postTournament(Long boardGameId, String name, int maxPlayers, LocalDate startsOn, LocalDate endsOn) throws Exception {

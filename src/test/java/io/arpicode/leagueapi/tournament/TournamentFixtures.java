@@ -1,7 +1,9 @@
 package io.arpicode.leagueapi.tournament;
 
+import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.boardgame.BoardGameFixtures;
+import io.arpicode.leagueapi.player.PlayerFixtures;
 import org.springframework.boot.test.context.TestComponent;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -10,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,11 +35,13 @@ public class TournamentFixtures {
 
     private final MockMvc mockMvc;
     private final BoardGameFixtures boardGames;
+    private final PlayerFixtures players;
     private final AtomicInteger sequence = new AtomicInteger();
 
-    public TournamentFixtures(MockMvc mockMvc, BoardGameFixtures boardGames) {
+    public TournamentFixtures(MockMvc mockMvc, BoardGameFixtures boardGames, PlayerFixtures players) {
         this.mockMvc = mockMvc;
         this.boardGames = boardGames;
+        this.players = players;
     }
 
     public long create(long boardGameId, String name) throws Exception {
@@ -71,6 +76,39 @@ public class TournamentFixtures {
         return createThrough(DEFAULT_MAX_PLAYERS, TournamentStatus.OPEN, TournamentStatus.IN_PROGRESS);
     }
 
+    // Fills a tournament through the registration endpoint, one new player per registration.
+    public void registerNewPlayers(long tournamentId, int count) throws Exception {
+        for (int i = 0; i < count; i++) {
+            mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"playerId":%d}
+                                    """.formatted(players.create())))
+                    .andExpect(status().isCreated());
+        }
+    }
+
+    // PUT replaces the whole tournament, so every other field is resent as the tournament has it
+    // now. They are read back through GET rather than tracked here, so this works on any tournament.
+    public void changeMaxPlayers(long id, Integer maxPlayers) throws Exception {
+        DocumentContext current = JsonPath.parse(mockMvc.perform(get("/api/v1/tournaments/{id}", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d, "startsOn":%s, "endsOn":%s}
+                                """.formatted(
+                                ((Number) current.read("$.boardGame.id")).longValue(),
+                                current.read("$.name"),
+                                current.read("$.status"),
+                                maxPlayers,
+                                quotedOrNull(current.read("$.startsOn")),
+                                quotedOrNull(current.read("$.endsOn")))))
+                .andExpect(status().isOk());
+    }
+
     // Walks the state machine one legal step at a time, as a client has to: there is no way to
     // create a tournament directly in a later status.
     private long createThrough(Integer maxPlayers, TournamentStatus... path) throws Exception {
@@ -97,7 +135,8 @@ public class TournamentFixtures {
                 .andExpect(status().isOk());
     }
 
-    private static String quotedOrNull(LocalDate date) {
+    // A LocalDate from the caller, or the ISO string GET returns.
+    private static String quotedOrNull(Object date) {
         return date == null ? "null" : "\"" + date + "\"";
     }
 
