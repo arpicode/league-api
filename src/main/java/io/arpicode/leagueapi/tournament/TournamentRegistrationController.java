@@ -36,4 +36,9 @@ public class TournamentRegistrationController {
                 .created(location)
                 .body(saved);
     }
+
+    @GetMapping("/{id}/registrations/{playerId}")
+    public TournamentRegistrationResponse getById(@PathVariable long id, @PathVariable long playerId) {
+        return tournamentRegistrationService.getById(id, playerId);
+    }
 }

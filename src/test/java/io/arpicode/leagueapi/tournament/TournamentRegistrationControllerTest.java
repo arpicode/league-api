@@ -1,6 +1,7 @@
 package io.arpicode.leagueapi.tournament;
 
 import io.arpicode.leagueapi.ApiIntegrationTest;
+import io.arpicode.leagueapi.CommitsData;
 import io.arpicode.leagueapi.player.PlayerFixtures;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
@@ -13,6 +14,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -152,6 +154,109 @@ class TournamentRegistrationControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
+    // -- Read
+
+    @Test
+    @DisplayName("should return a confirmed registration without a waitlist position")
+    void getTournamentConfirmedRegistration() throws Exception {
+        long playerId = players.create();
+        long tournamentId = tournaments.createOpen();
+
+        postRegistration(tournamentId, playerId)
+                .andExpect(status().isCreated());
+
+        getRegistration(tournamentId, playerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waitlistPosition").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("should return each waitlisted registration's position in the tournament's waitlist")
+    void getTournamentWaitlistedRegistrationPositions() throws Exception {
+        // All registrations share registered_at inside this rolled-back transaction, so the player id
+        // decides the order here: players created first rank first.
+        long tournamentId = tournaments.createOpen(2);
+        registerNewPlayers(tournamentId, 2);
+
+        long firstPlayerId = players.create();
+        long secondPlayerId = players.create();
+        postRegistration(tournamentId, firstPlayerId)
+                .andExpect(status().isCreated());
+        postRegistration(tournamentId, secondPlayerId)
+                .andExpect(status().isCreated());
+
+        getRegistration(tournamentId, firstPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waitlistPosition").value(1));
+        getRegistration(tournamentId, secondPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waitlistPosition").value(2));
+    }
+
+    @Test
+    @DisplayName("should not count another tournament's waitlist in a waitlisted registration's position")
+    void getTournamentWaitlistedRegistrationForTargetedTournament() throws Exception {
+        // Its waitlisted player is created first, so it would rank ahead if the tournament were ignored.
+        long otherTournamentId = tournaments.createOpen(2);
+        registerNewPlayers(otherTournamentId, 3);
+
+        long tournamentId = tournaments.createOpen(2);
+        registerNewPlayers(tournamentId, 2);
+
+        long playerId = players.create();
+        postRegistration(tournamentId, playerId)
+                .andExpect(status().isCreated());
+
+        getRegistration(tournamentId, playerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waitlistPosition").value(1));
+    }
+
+    @Test
+    @DisplayName("should rank the waitlist by registration time before player id")
+    @CommitsData
+    void getTournamentWaitlistedRegistrationByRegistrationTime() throws Exception {
+        // Each registration commits in its own transaction, like real requests do, since Postgres
+        // now() is frozen for the life of a transaction and would give both the same registered_at.
+        long tournamentId = tournaments.createOpen(2);
+        registerNewPlayers(tournamentId, 2);
+
+        long lowerPlayerId = players.create();
+        long higherPlayerId = players.create();
+        postRegistration(tournamentId, higherPlayerId)
+                .andExpect(status().isCreated());
+        postRegistration(tournamentId, lowerPlayerId)
+                .andExpect(status().isCreated());
+
+        getRegistration(tournamentId, lowerPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.waitlistPosition").value(2));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when the player is not registered for the tournament")
+    void getTournamentRegistrationNotRegistered() throws Exception {
+        long playerId = players.create();
+        long tournamentId = tournaments.createOpen();
+
+        getRegistration(tournamentId, playerId)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when getting a registration for a tournament that does not exist")
+    void getTournamentRegistrationTournamentNotFound() throws Exception {
+        // A real player id, so the only thing missing is the tournament.
+        long playerId = players.create();
+
+        getRegistration(Long.MAX_VALUE, playerId)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+    }
+
     // -- Helpers
 
     private ResultActions postRegistration(long tournamentId, long playerId) throws Exception {
@@ -160,6 +265,10 @@ class TournamentRegistrationControllerTest {
                 .content("""
                         {"playerId":%d}
                         """.formatted(playerId)));
+    }
+
+    private ResultActions getRegistration(long tournamentId, long playerId) throws Exception {
+        return mockMvc.perform(get("/api/v1/tournaments/{id}/registrations/{playerId}", tournamentId, playerId));
     }
 
     // Fills a tournament through the endpoint under test, one new player per registration. It stays
