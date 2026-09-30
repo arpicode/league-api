@@ -8,9 +8,15 @@ import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationCreateRequest;
 import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class TournamentRegistrationService {
@@ -80,6 +86,29 @@ public class TournamentRegistrationService {
         );
     }
 
+    // Repeatable read keeps the page, its count and the positions on one snapshot.
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public Page<TournamentRegistrationResponse> list(long tournamentId, Pageable pageable) {
+        Page<TournamentRegistration> registrations =
+                tournamentRegistrationRepository.findByTournamentId(tournamentId, pageable);
+
+        // An empty page is either past the end of an existing roster or a missing tournament.
+        if (registrations.isEmpty() && !tournamentRepository.existsById(tournamentId)) {
+            throw new BusinessException(
+                    ErrorCode.TOURNAMENT_NOT_FOUND,
+                    UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
+            );
+        }
+
+        Map<Long, Integer> positions = waitlistPositions(tournamentId, registrations.getContent());
+
+        return registrations.map(registration -> toTournamentRegistrationResponse(
+                registration,
+                registration.getPlayer(),
+                positions.get(registration.getId().getPlayerId())
+        ));
+    }
+
     // The tournament is the parent resource in the URL, so a missing one is reported as such rather
     // than as a missing registration. It is only looked up on this path, sparing the happy path a query.
     private BusinessException registrationNotFound(long tournamentId, long playerId) {
@@ -107,6 +136,23 @@ public class TournamentRegistrationService {
                         "Registration (tournament %d, player %d) is WAITLISTED but has no waitlist position"
                                 .formatted(id.getTournamentId(), id.getPlayerId())));
         return Math.toIntExact(position);
+    }
+
+    private Map<Long, Integer> waitlistPositions(long tournamentId, List<TournamentRegistration> registrations) {
+        List<Long> waitlistedPlayerIds = registrations.stream()
+                .filter(registration -> !registration.isConfirmed())
+                .map(registration -> registration.getId().getPlayerId())
+                .toList();
+
+        if (waitlistedPlayerIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return tournamentRegistrationRepository.findWaitlistPositions(tournamentId, waitlistedPlayerIds).stream()
+                .collect(Collectors.toMap(
+                        TournamentRegistrationRepository.WaitlistPosition::getPlayerId,
+                        position -> Math.toIntExact(position.getPosition())
+                ));
     }
 
     private TournamentRegistrationResponse toTournamentRegistrationResponse(TournamentRegistration tournamentRegistration, Player player, Integer waitlistPosition) {
