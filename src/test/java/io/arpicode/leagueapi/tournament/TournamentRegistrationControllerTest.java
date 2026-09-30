@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -356,6 +357,169 @@ class TournamentRegistrationControllerTest {
                 .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
+    // -- Delete
+
+    @Test
+    @DisplayName("should withdraw a player from a tournament")
+    @CommitsData
+    void deleteTournamentRegistration() throws Exception {
+        // Committed rather than rolled back, so the DELETE really reaches Postgres: inside the test
+        // transaction the row would only leave the persistence context, and the follow-up read would
+        // be answered from there without querying the table.
+        long playerId = players.create();
+        long tournamentId = tournaments.createOpen();
+        postRegistration(tournamentId, playerId)
+                .andExpect(status().isCreated());
+
+        deleteRegistration(tournamentId, playerId)
+                .andExpect(status().isNoContent());
+
+        getRegistration(tournamentId, playerId)
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("should promote the first waitlisted registration when a confirmed player withdraws")
+    void deleteConfirmedTournamentRegistrationPromotesFirstWaitlisted() throws Exception {
+        // All registrations share registered_at inside this rolled-back transaction, so the player id
+        // decides the order here: players created first rank first. The confirmed player who stays
+        // also ranks ahead of the waitlist, so a lookup that ignored the status would pick them.
+        long tournamentId = tournaments.createOpen(2);
+        long withdrawingPlayerId = players.create();
+        postRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isCreated());
+        registerNewPlayers(tournamentId, 1);
+
+        long firstWaitlistedPlayerId = players.create();
+        long secondWaitlistedPlayerId = players.create();
+        postRegistration(tournamentId, firstWaitlistedPlayerId)
+                .andExpect(status().isCreated());
+        postRegistration(tournamentId, secondWaitlistedPlayerId)
+                .andExpect(status().isCreated());
+
+        deleteRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isNoContent());
+
+        getRegistration(tournamentId, firstWaitlistedPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+        getRegistration(tournamentId, secondWaitlistedPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
+    }
+
+    @Test
+    @DisplayName("should promote the earliest waitlisted registration before the lowest player id")
+    @CommitsData
+    void deleteConfirmedTournamentRegistrationPromotesByRegistrationTime() throws Exception {
+        // Each registration commits in its own transaction, like real requests do, since Postgres
+        // now() is frozen for the life of a transaction and would give both the same registered_at.
+        long tournamentId = tournaments.createOpen(2);
+        long withdrawingPlayerId = players.create();
+        postRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isCreated());
+        registerNewPlayers(tournamentId, 1);
+
+        long lowerPlayerId = players.create();
+        long higherPlayerId = players.create();
+        postRegistration(tournamentId, higherPlayerId)
+                .andExpect(status().isCreated());
+        postRegistration(tournamentId, lowerPlayerId)
+                .andExpect(status().isCreated());
+
+        deleteRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isNoContent());
+
+        getRegistration(tournamentId, higherPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+    }
+
+    @Test
+    @DisplayName("should promote nobody when a waitlisted player withdraws")
+    void deleteWaitlistedTournamentRegistrationPromotesNobody() throws Exception {
+        // A waitlisted withdrawal frees no place, so promoting the next in line would overbook.
+        long tournamentId = tournaments.createOpen(2);
+        registerNewPlayers(tournamentId, 2);
+
+        long withdrawingPlayerId = players.create();
+        long remainingPlayerId = players.create();
+        postRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isCreated());
+        postRegistration(tournamentId, remainingPlayerId)
+                .andExpect(status().isCreated());
+
+        deleteRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isNoContent());
+
+        getRegistration(tournamentId, remainingPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
+    }
+
+    @Test
+    @DisplayName("should promote from the targeted tournament's waitlist only")
+    void deleteConfirmedTournamentRegistrationPromotesFromTargetedTournament() throws Exception {
+        // Its waitlisted player is created first, so it would be promoted if the tournament were ignored.
+        long otherTournamentId = tournaments.createOpen(2);
+        registerNewPlayers(otherTournamentId, 3);
+
+        long tournamentId = tournaments.createOpen(2);
+        long withdrawingPlayerId = players.create();
+        postRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isCreated());
+        registerNewPlayers(tournamentId, 1);
+
+        long waitlistedPlayerId = players.create();
+        postRegistration(tournamentId, waitlistedPlayerId)
+                .andExpect(status().isCreated());
+
+        deleteRegistration(tournamentId, withdrawingPlayerId)
+                .andExpect(status().isNoContent());
+
+        getRegistration(tournamentId, waitlistedPlayerId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+    }
+
+    @Test
+    @DisplayName("should return 409 Conflict when withdrawing from a tournament that is already in progress")
+    void deleteTournamentRegistrationInProgressTournament() throws Exception {
+        // Not registered, since the fixtures can't yet start a tournament that has registrations. The
+        // status check runs before the registration lookup, so a missing check would answer 404 here.
+        long playerId = players.create();
+        long tournamentId = tournaments.createInProgress();
+
+        deleteRegistration(tournamentId, playerId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_OPEN.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL.formatted(TournamentStatus.IN_PROGRESS)));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when withdrawing a player who is not registered for the tournament")
+    void deleteTournamentRegistrationNotRegistered() throws Exception {
+        long playerId = players.create();
+        long tournamentId = tournaments.createOpen();
+
+        deleteRegistration(tournamentId, playerId)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when withdrawing from a tournament that does not exist")
+    void deleteTournamentRegistrationTournamentNotFound() throws Exception {
+        // A real player id, so the only thing missing is the tournament.
+        long playerId = players.create();
+
+        deleteRegistration(Long.MAX_VALUE, playerId)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+    }
+
     // -- Helpers
 
     private ResultActions postRegistration(long tournamentId, long playerId) throws Exception {
@@ -368,6 +532,10 @@ class TournamentRegistrationControllerTest {
 
     private ResultActions getRegistration(long tournamentId, long playerId) throws Exception {
         return mockMvc.perform(get("/api/v1/tournaments/{id}/registrations/{playerId}", tournamentId, playerId));
+    }
+
+    private ResultActions deleteRegistration(long tournamentId, long playerId) throws Exception {
+        return mockMvc.perform(delete("/api/v1/tournaments/{id}/registrations/{playerId}", tournamentId, playerId));
     }
 
     // Paging and sorting go in the query string as a client sends them, e.g. "page=1&size=3".
