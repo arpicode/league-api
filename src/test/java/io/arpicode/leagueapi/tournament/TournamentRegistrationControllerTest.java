@@ -483,10 +483,8 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should return 409 Conflict when withdrawing from a tournament that is already in progress")
     void deleteTournamentRegistrationInProgressTournament() throws Exception {
-        // Not registered, since the fixtures can't yet start a tournament that has registrations. The
-        // status check runs before the registration lookup, so a missing check would answer 404 here.
         long playerId = players.create();
-        long tournamentId = tournaments.createInProgress();
+        long tournamentId = tournaments.createInProgress(playerId);
 
         deleteRegistration(tournamentId, playerId)
                 .andExpect(status().isConflict())

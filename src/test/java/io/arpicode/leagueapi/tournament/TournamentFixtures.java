@@ -30,6 +30,7 @@ public class TournamentFixtures {
     // about still takes the ordinary capacity path, so only a test that asks for createOpen(null)
     // depends on the no-limit rule.
     private static final int DEFAULT_MAX_PLAYERS = 16;
+    private static final long[] NO_PLAYERS = {};
 
     private final MockMvc mockMvc;
     private final BoardGameFixtures boardGames;
@@ -59,7 +60,7 @@ public class TournamentFixtures {
     }
 
     public long createDraft() throws Exception {
-        return createThrough(DEFAULT_MAX_PLAYERS);
+        return createThrough(DEFAULT_MAX_PLAYERS, NO_PLAYERS);
     }
 
     public long createOpen() throws Exception {
@@ -67,22 +68,19 @@ public class TournamentFixtures {
     }
 
     public long createOpen(Integer maxPlayers) throws Exception {
-        return createThrough(maxPlayers, TournamentStatus.OPEN);
+        return createThrough(maxPlayers, NO_PLAYERS, TournamentStatus.OPEN);
     }
 
-    public long createInProgress() throws Exception {
-        return createThrough(DEFAULT_MAX_PLAYERS, TournamentStatus.OPEN, TournamentStatus.IN_PROGRESS);
+    // The players register before the tournament starts, so they are its confirmed roster. Past
+    // DEFAULT_MAX_PLAYERS the extra ones would be waitlisted, and starting deletes the waitlist.
+    public long createInProgress(long... playerIds) throws Exception {
+        return createThrough(DEFAULT_MAX_PLAYERS, playerIds, TournamentStatus.OPEN, TournamentStatus.IN_PROGRESS);
     }
 
     // Fills a tournament through the registration endpoint, one new player per registration.
     public void registerNewPlayers(long tournamentId, int count) throws Exception {
         for (int i = 0; i < count; i++) {
-            mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {"playerId":%d}
-                                    """.formatted(players.create())))
-                    .andExpect(status().isCreated());
+            register(tournamentId, players.create());
         }
     }
 
@@ -108,17 +106,32 @@ public class TournamentFixtures {
     }
 
     // Walks the state machine one legal step at a time, as a client has to: there is no way to
-    // create a tournament directly in a later status.
-    private long createThrough(Integer maxPlayers, TournamentStatus... path) throws Exception {
+    // create a tournament directly in a later status. The players register once the walk reaches
+    // OPEN, the only status that takes registrations.
+    private long createThrough(Integer maxPlayers, long[] playerIds, TournamentStatus... path) throws Exception {
         long boardGameId = boardGames.create();
         String name = "fixture_tournament_" + sequence.incrementAndGet();
         long id = create(boardGameId, name, maxPlayers, null, null);
 
         for (TournamentStatus status : path) {
             transition(id, boardGameId, name, maxPlayers, status);
+            if (status == TournamentStatus.OPEN) {
+                for (long playerId : playerIds) {
+                    register(id, playerId);
+                }
+            }
         }
 
         return id;
+    }
+
+    private void register(long tournamentId, long playerId) throws Exception {
+        mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"playerId":%d}
+                                """.formatted(playerId)))
+                .andExpect(status().isCreated());
     }
 
     // PUT replaces the whole tournament, so a transition resends every field the tournament was
