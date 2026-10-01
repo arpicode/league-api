@@ -148,10 +148,10 @@ public class Tournament {
         this.endsOn = endsOn;
     }
 
-    // Repointing a tournament at another game is only safe before it opens: once matches exist
-    // they reference the (tournament, board_game) pair, and the game they were played with
-    // cannot be rewritten underneath them. Re-sending the current value is not a change, so it
-    // passes at any status and keeps a full-replace update idempotent.
+    // Repointing a tournament at another game is only safe before it opens: matches get their game
+    // through their tournament, so once they exist a change would silently rewrite the game they
+    // were played with, and nothing in the database refuses it. Re-sending the current value is not
+    // a change, so it passes at any status and keeps a full-replace update idempotent.
     public void changeBoardGame(@NonNull BoardGame target) {
         if (target.getId().equals(this.boardGame.getId())) {
             return;
