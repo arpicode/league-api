@@ -67,8 +67,10 @@ public class TournamentService {
         return toTournamentResponse(tournament);
     }
 
-    // Locked like a registration or a withdrawal: a new maxPlayers is checked against the roster and
-    // filled from its waitlist, and those two change it concurrently otherwise.
+    // Locked like a registration or a withdrawal, since both change the roster this method reads and
+    // writes: a new maxPlayers is checked against it and filled from its waitlist, and leaving OPEN
+    // deletes that waitlist. Without the lock, a registration could see OPEN and waitlist itself
+    // after the delete.
     @Transactional
     public TournamentResponse update(long id, TournamentUpdateRequest tournamentUpdateRequest) {
         Tournament tournament = tournamentRepository.findByIdForUpdate(id)
@@ -77,6 +79,7 @@ public class TournamentService {
                         UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
         BoardGame boardGame = findBoardGame(tournamentUpdateRequest.boardGameId());
         Short previousMaxPlayers = tournament.getMaxPlayers();
+        TournamentStatus previousStatus = tournament.getStatus();
 
         // Order matters: every field change is validated against the status the request arrived
         // with, so the transition is applied last. Repointing a DRAFT tournament while opening
@@ -92,6 +95,11 @@ public class TournamentService {
             tournamentRegistrationService.applyMaxPlayersChange(tournament);
         }
         tournament.transitionTo(tournamentUpdateRequest.status());
+
+        // V009: once the tournament leaves OPEN, every remaining row is a confirmed player.
+        if (previousStatus == TournamentStatus.OPEN && tournament.getStatus() != TournamentStatus.OPEN) {
+            tournamentRegistrationService.deleteAllWaitlisted(id);
+        }
 
         tournamentRepository.saveAndFlush(tournament);
 

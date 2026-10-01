@@ -137,6 +137,13 @@ public class TournamentRegistrationService {
         }
     }
 
+    // Only for a tournament leaving OPEN. The caller must hold the tournament lock, as
+    // TournamentService.update does, or a registration could waitlist itself after the delete.
+    public void deleteAllWaitlisted(long tournamentId) {
+        List<TournamentRegistration> waitlisted = tournamentRegistrationRepository.findByTournamentIdAndStatus(tournamentId, TournamentRegistrationStatus.WAITLISTED);
+        tournamentRegistrationRepository.deleteAll(waitlisted);
+    }
+
     // Fits the roster to a tournament's new maxPlayers. The caller must hold the tournament lock, as
     // TournamentService.update does, or a registration could take a place between the count and the
     // promotions. Raising the limit, or removing it, hands the new places to the waitlist, but only

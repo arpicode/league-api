@@ -8,6 +8,8 @@ import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -631,6 +633,47 @@ class TournamentControllerTest {
 
         putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN, 3)
                 .andExpect(status().isOk());
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = TournamentStatus.class, names = {"IN_PROGRESS", "CANCELLED"})
+    @DisplayName("should remove all waitlisted registrations when tournament leaves OPEN")
+    void updateTournamentLeavingOpenWithWaitlistedRegistrations(TournamentStatus target) throws Exception {
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name", 2, null, null);
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN, 2)
+                .andExpect(status().isOk());
+
+        tournaments.registerNewPlayers(id, 5);
+
+        putTournament(id, boardGameId, "test_tournament_name", target, 2)
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/tournaments/{id}/registrations", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(2));
+    }
+
+    @Test
+    @DisplayName("should promote into a raised maximum before deleting the waitlist when one request also starts the tournament")
+    void raiseMaxPlayersWhileStartingTournament() throws Exception {
+        // applyMaxPlayersChange() checks the status the request arrived with, so the places a raised
+        // maximum frees go to the waitlist before leaving OPEN deletes the rest of it. Applying the
+        // transition first would skip the promotion and delete those players with the rest.
+        long boardGameId = boardGames.create();
+        long id = tournaments.create(boardGameId, "test_tournament_name", 2, null, null);
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.OPEN, 2)
+                .andExpect(status().isOk());
+
+        // 2 confirmed and 3 waitlisted: raising to 4 promotes two and leaves one to delete.
+        tournaments.registerNewPlayers(id, 5);
+
+        putTournament(id, boardGameId, "test_tournament_name", TournamentStatus.IN_PROGRESS, 4)
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/tournaments/{id}/registrations", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(4));
     }
 
     // -- Delete
