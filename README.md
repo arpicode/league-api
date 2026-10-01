@@ -40,11 +40,23 @@ Java 21 · Spring Boot 4.1 · Spring Data JPA · Flyway · PostgreSQL 17 · Test
 
 - **Players** and **board games**: full CRUD under `/api/v1/players` and `/api/v1/boardgames`,
   paginated listing, bean validation, case-insensitive uniqueness enforced in the database.
+- **Tournaments**: full CRUD under `/api/v1/tournaments`, driven by a state machine:
+  `DRAFT → OPEN → IN_PROGRESS → CLOSED`, and `CANCELLED` from `DRAFT` or `OPEN`. Only a draft can
+  change its board game or be deleted; a closed or cancelled tournament is read-only.
+- **Registrations**: register, read, list the paginated roster and withdraw under
+  `/api/v1/tournaments/{id}/registrations`, only while the tournament is `OPEN`. Players are
+  `CONFIRMED` up to `maxPlayers`, then `WAITLISTED` with a position rather than refused. A
+  withdrawal, or a raised or removed limit, promotes from the waitlist in registration order; a
+  limit below the confirmed players is refused; the waitlist is deleted once the tournament leaves
+  `OPEN`.
+- **Concurrency**: registrations, withdrawals and tournament updates lock the tournament row, so
+  concurrent requests cannot overbook a tournament or promote the same player twice.
 - **Errors**: every response follows RFC 9457 `ProblemDetail`, carrying a stable `code`
   and an `errorId` that matches a log line — including the ones Spring raises before the
   controller is reached.
 - **Schema**: Flyway migrations only, `ddl-auto: validate`, collation pinned to ICU.
-- **Tests**: 55 integration tests driving the real stack against Postgres in Testcontainers.
+- **Tests**: 135 integration tests driving the real stack against Postgres in Testcontainers, and
+  34 unit tests on the tournament state machine and the exception handler.
 
 ## Run it
 
@@ -64,7 +76,7 @@ curl localhost:8080/actuator/health
 
 - [x] 1.1 Project setup, Flyway, health endpoint
 - [x] 1.2 Players and board games (CRUD, validation, RFC 9457 errors)
-- [ ] 1.3 Tournaments and registrations (state machine, capacity rules)
+- [x] 1.3 Tournaments and registrations (state machine, capacity rules)
 - [ ] 1.4 Matches and results (optimistic locking)
 - [ ] 1.5 End-to-end scenario, documentation, `v0.1`
 
