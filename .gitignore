@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Developer-specific ###
+devdata/
+application-dev.yaml
+additional-spring-configuration-metadata.json
