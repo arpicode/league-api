@@ -4,7 +4,18 @@ import io.arpicode.leagueapi.boardgame.BoardGame;
 import io.arpicode.leagueapi.shared.error.BusinessException;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -121,6 +132,18 @@ public class Tournament {
             throw new BusinessException(
                     ErrorCode.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED,
                     UserMessages.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED.formatted(confirmedPlayers)
+            );
+        }
+    }
+
+    // Matches need a fixed roster, so they are only created once the tournament is IN_PROGRESS.
+    // Same locking caveat as assertOpenForRegistration(): without the lock, a concurrent transition
+    // can close the tournament between this check and the match insert.
+    public void assertInProgress() {
+        if (this.status != TournamentStatus.IN_PROGRESS) {
+            throw new BusinessException(
+                    ErrorCode.TOURNAMENT_NOT_IN_PROGRESS,
+                    UserMessages.TOURNAMENT_NOT_IN_PROGRESS_FOR_GAME_MATCH.formatted(this.getStatus())
             );
         }
     }
