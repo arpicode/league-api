@@ -54,22 +54,21 @@ public class TournamentRegistrationService {
 
         Short maxPlayersAllowed = tournament.getMaxPlayers();
         long registeredPlayersCount = tournamentRegistrationRepository.countByStatusAndTournamentId(TournamentRegistrationStatus.CONFIRMED, tournamentId);
-        long waitlistedPlayersCount = tournamentRegistrationRepository.countByStatusAndTournamentId(TournamentRegistrationStatus.WAITLISTED, tournamentId);
         TournamentRegistration tournamentRegistration;
-        Integer waitlistPosition;
 
         // If max players for tournament is null, any number of players can register
         if (maxPlayersAllowed == null || registeredPlayersCount < maxPlayersAllowed) {
             tournamentRegistration = new TournamentRegistration(tournament, player, TournamentRegistrationStatus.CONFIRMED);
-            waitlistPosition = null;
         } else {
             tournamentRegistration = new TournamentRegistration(tournament, player, TournamentRegistrationStatus.WAITLISTED);
-            waitlistPosition = Math.toIntExact(waitlistedPlayersCount + 1);
         }
 
         TournamentRegistration saved = tournamentRegistrationRepository.saveAndFlush(tournamentRegistration);
 
-        return toTournamentRegistrationResponse(saved, player, waitlistPosition);
+        // Ranked by the query GET uses rather than counted, so the position given here is the one a
+        // read returns even if registered_at ever disagrees with the insert order. The flush above
+        // puts the new row in that ranking.
+        return toTournamentRegistrationResponse(saved, player, waitlistPosition(saved));
     }
 
     // Repeatable read runs both queries on one snapshot, so a registration read as WAITLISTED is still

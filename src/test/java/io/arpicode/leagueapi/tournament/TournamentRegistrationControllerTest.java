@@ -176,8 +176,6 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should return each waitlisted registration's position in the tournament's waitlist")
     void getTournamentWaitlistedRegistrationPositions() throws Exception {
-        // All registrations share registered_at inside this rolled-back transaction, so the player id
-        // decides the order here: players created first rank first.
         long tournamentId = tournaments.createOpen(2);
         tournaments.registerNewPlayers(tournamentId, 2);
 
@@ -199,7 +197,7 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should not count another tournament's waitlist in a waitlisted registration's position")
     void getTournamentWaitlistedRegistrationForTargetedTournament() throws Exception {
-        // Its waitlisted player is created first, so it would rank ahead if the tournament were ignored.
+        // Its waitlisted player registers first, so it would rank ahead if the tournament were ignored.
         long otherTournamentId = tournaments.createOpen(2);
         tournaments.registerNewPlayers(otherTournamentId, 3);
 
@@ -217,10 +215,9 @@ class TournamentRegistrationControllerTest {
 
     @Test
     @DisplayName("should rank the waitlist by registration time before player id")
-    @CommitsData
     void getTournamentWaitlistedRegistrationByRegistrationTime() throws Exception {
-        // Each registration commits in its own transaction, like real requests do, since Postgres
-        // now() is frozen for the life of a transaction and would give both the same registered_at.
+        // Both register inside this test's one transaction, so registered_at has to be the time of
+        // each insert: now(), the transaction's start, would tie them and leave the player id to rank.
         long tournamentId = tournaments.createOpen(2);
         tournaments.registerNewPlayers(tournamentId, 2);
 
@@ -265,7 +262,7 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should list only the targeted tournament's registrations and rank only its waitlist")
     void listTournamentRegistrationsForTargetedTournament() throws Exception {
-        // Its waitlisted player is created first, so it would rank ahead if the tournament were ignored.
+        // Its waitlisted player registers first, so it would rank ahead if the tournament were ignored.
         long otherTournamentId = tournaments.createOpen(2);
         tournaments.registerNewPlayers(otherTournamentId, 3);
 
@@ -321,10 +318,9 @@ class TournamentRegistrationControllerTest {
 
     @Test
     @DisplayName("should list the roster in registration order and rank its waitlist by registration time")
-    @CommitsData
     void listTournamentRegistrationsByRegistrationTime() throws Exception {
-        // Each registration commits in its own transaction, like real requests do, since Postgres
-        // now() is frozen for the life of a transaction and would give both the same registered_at.
+        // Both register inside this test's one transaction, so registered_at has to be the time of
+        // each insert: now(), the transaction's start, would tie them and leave the player id to rank.
         long tournamentId = tournaments.createOpen(2);
         tournaments.registerNewPlayers(tournamentId, 2);
 
@@ -383,9 +379,8 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should promote the first waitlisted registration when a confirmed player withdraws")
     void deleteConfirmedTournamentRegistrationPromotesFirstWaitlisted() throws Exception {
-        // All registrations share registered_at inside this rolled-back transaction, so the player id
-        // decides the order here: players created first rank first. The confirmed player who stays
-        // also ranks ahead of the waitlist, so a lookup that ignored the status would pick them.
+        // The confirmed player who stays registers before the waitlist, so a lookup that ignored the
+        // status would pick them.
         long tournamentId = tournaments.createOpen(2);
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
@@ -412,10 +407,9 @@ class TournamentRegistrationControllerTest {
 
     @Test
     @DisplayName("should promote the earliest waitlisted registration before the lowest player id")
-    @CommitsData
     void deleteConfirmedTournamentRegistrationPromotesByRegistrationTime() throws Exception {
-        // Each registration commits in its own transaction, like real requests do, since Postgres
-        // now() is frozen for the life of a transaction and would give both the same registered_at.
+        // Both register inside this test's one transaction, so registered_at has to be the time of
+        // each insert: now(), the transaction's start, would tie them and leave the player id to rank.
         long tournamentId = tournaments.createOpen(2);
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
@@ -462,7 +456,7 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should promote from the targeted tournament's waitlist only")
     void deleteConfirmedTournamentRegistrationPromotesFromTargetedTournament() throws Exception {
-        // Its waitlisted player is created first, so it would be promoted if the tournament were ignored.
+        // Its waitlisted player registers first, so it would be promoted if the tournament were ignored.
         long otherTournamentId = tournaments.createOpen(2);
         tournaments.registerNewPlayers(otherTournamentId, 3);
 
@@ -525,8 +519,6 @@ class TournamentRegistrationControllerTest {
     @Test
     @DisplayName("should promote as many waitlisted registrations as a raised maximum frees, in rank order")
     void raiseMaxPlayersPromotesWaitlistedRegistrations() throws Exception {
-        // All registrations share registered_at inside this rolled-back transaction, so the player id
-        // decides the order here: players created first rank first.
         long tournamentId = tournaments.createOpen(2);
         tournaments.registerNewPlayers(tournamentId, 2);
 
