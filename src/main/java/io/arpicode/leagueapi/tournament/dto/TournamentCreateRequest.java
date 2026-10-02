@@ -10,18 +10,18 @@ import java.time.LocalDate;
 @TournamentDates
 public record TournamentCreateRequest(
 
-        @NotNull(message = "Board game must be set")
-        Long boardGameId,
+    @NotNull(message = "Board game must be set")
+    Long boardGameId,
 
-        @NotBlank(message = "Name cannot be blank")
-        @Size(min = 2, max = 150, message = "Name must be between 2 and 150 characters")
-        String name,
+    @NotBlank(message = "Name cannot be blank")
+    @Size(min = 2, max = 150, message = "Name must be between 2 and 150 characters")
+    String name,
 
-        @Min(value = 2, message = "Maximum players must be at least 2")
-        Short maxPlayers,
+    @Min(value = 2, message = "Maximum players must be at least 2")
+    Short maxPlayers,
 
-        LocalDate startsOn,
-        LocalDate endsOn
+    LocalDate startsOn,
+    LocalDate endsOn
 
 ) implements TournamentSchedule {
 

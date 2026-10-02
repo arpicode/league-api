@@ -12,7 +12,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -49,12 +51,12 @@ public class TournamentFixtures {
 
     public long create(long boardGameId, String name, Integer maxPlayers, LocalDate startsOn, LocalDate endsOn) throws Exception {
         MockHttpServletResponse response = mockMvc.perform(post("/api/v1/tournaments")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"boardGameId":%d, "name":"%s", "maxPlayers":%d, "startsOn":%s, "endsOn":%s}
-                                """.formatted(boardGameId, name, maxPlayers, quotedOrNull(startsOn), quotedOrNull(endsOn))))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"boardGameId":%d, "name":"%s", "maxPlayers":%d, "startsOn":%s, "endsOn":%s}
+                    """.formatted(boardGameId, name, maxPlayers, quotedOrNull(startsOn), quotedOrNull(endsOn))))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse();
 
         return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
     }
@@ -88,21 +90,21 @@ public class TournamentFixtures {
     // now. They are read back through GET rather than tracked here, so this works on any tournament.
     public void changeMaxPlayers(long id, Integer maxPlayers) throws Exception {
         DocumentContext current = JsonPath.parse(mockMvc.perform(get("/api/v1/tournaments/{id}", id))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString());
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString());
 
         mockMvc.perform(put("/api/v1/tournaments/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d, "startsOn":%s, "endsOn":%s}
-                                """.formatted(
-                                ((Number) current.read("$.boardGame.id")).longValue(),
-                                current.read("$.name"),
-                                current.read("$.status"),
-                                maxPlayers,
-                                quotedOrNull(current.read("$.startsOn")),
-                                quotedOrNull(current.read("$.endsOn")))))
-                .andExpect(status().isOk());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d, "startsOn":%s, "endsOn":%s}
+                    """.formatted(
+                    ((Number) current.read("$.boardGame.id")).longValue(),
+                    current.read("$.name"),
+                    current.read("$.status"),
+                    maxPlayers,
+                    quotedOrNull(current.read("$.startsOn")),
+                    quotedOrNull(current.read("$.endsOn")))))
+            .andExpect(status().isOk());
     }
 
     // Walks the state machine one legal step at a time, as a client has to: there is no way to
@@ -127,11 +129,11 @@ public class TournamentFixtures {
 
     private void register(long tournamentId, long playerId) throws Exception {
         mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"playerId":%d}
-                                """.formatted(playerId)))
-                .andExpect(status().isCreated());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"playerId":%d}
+                    """.formatted(playerId)))
+            .andExpect(status().isCreated());
     }
 
     // PUT replaces the whole tournament, so a transition resends every field the tournament was
@@ -139,11 +141,11 @@ public class TournamentFixtures {
     // test's tournament into an unlimited one.
     private void transition(long id, long boardGameId, String name, Integer maxPlayers, TournamentStatus status) throws Exception {
         mockMvc.perform(put("/api/v1/tournaments/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d}
-                                """.formatted(boardGameId, name, status, maxPlayers)))
-                .andExpect(status().isOk());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d}
+                    """.formatted(boardGameId, name, status, maxPlayers)))
+            .andExpect(status().isOk());
     }
 
     // A LocalDate from the caller, or the ISO string GET returns.

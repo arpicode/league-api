@@ -10,8 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // The error contract (problem+json, code, errorId) for every GlobalExceptionHandler path a request
 // can reach without existing data: errors Spring raises, and the not-found and validation errors
@@ -43,18 +47,18 @@ class ErrorContractTest {
 
     @ParameterizedTest(name = "{0}")
     @CsvSource({
-            BOARD_GAMES + ", BOARD_GAME_NOT_FOUND",
-            PLAYERS + ", PLAYER_NOT_FOUND",
-            TOURNAMENTS + ", TOURNAMENT_NOT_FOUND",
-            TOURNAMENT_REGISTRATIONS + ", TOURNAMENT_NOT_FOUND"
+        BOARD_GAMES + ", BOARD_GAME_NOT_FOUND",
+        PLAYERS + ", PLAYER_NOT_FOUND",
+        TOURNAMENTS + ", TOURNAMENT_NOT_FOUND",
+        TOURNAMENT_REGISTRATIONS + ", TOURNAMENT_NOT_FOUND"
     })
     @DisplayName("should return 404 Not Found with the error contract when the application raises a not-found error")
     void notFound(String basePath, ErrorCode code) throws Exception {
         mockMvc.perform(get(basePath + "/{id}", Long.MAX_VALUE))
-                .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(code.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+            .andExpect(status().isNotFound())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(code.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -62,12 +66,12 @@ class ErrorContractTest {
     @DisplayName("should return 400 Bad Request with the error contract when the body fails validation")
     void validationFailed(String basePath) throws Exception {
         mockMvc.perform(post(basePath)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -75,12 +79,12 @@ class ErrorContractTest {
     @DisplayName("should return 400 Bad Request with the error contract when the JSON body is malformed")
     void malformedJson(String basePath) throws Exception {
         mockMvc.perform(post(basePath)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{not json"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.MALFORMED_REQUEST.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{not json"))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.MALFORMED_REQUEST.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -88,10 +92,10 @@ class ErrorContractTest {
     @DisplayName("should return 400 Bad Request with the error contract when the id is not a number")
     void nonNumericId(String basePath) throws Exception {
         mockMvc.perform(get(basePath + "/abc"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.MALFORMED_REQUEST.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.MALFORMED_REQUEST.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -99,10 +103,10 @@ class ErrorContractTest {
     @DisplayName("should return 405 Method Not Allowed with the error contract for an unsupported method")
     void unsupportedMethod(String basePath) throws Exception {
         mockMvc.perform(patch(basePath + "/1"))
-                .andExpect(status().isMethodNotAllowed())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.METHOD_NOT_ALLOWED.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+            .andExpect(status().isMethodNotAllowed())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.METHOD_NOT_ALLOWED.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -110,22 +114,22 @@ class ErrorContractTest {
     @DisplayName("should return 415 Unsupported Media Type with the error contract for a non-JSON body")
     void unsupportedMediaType(String basePath) throws Exception {
         mockMvc.perform(post(basePath)
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .content("test_user"))
-                .andExpect(status().isUnsupportedMediaType())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.UNSUPPORTED_MEDIA_TYPE.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+                .contentType(MediaType.TEXT_PLAIN)
+                .content("test_user"))
+            .andExpect(status().isUnsupportedMediaType())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.UNSUPPORTED_MEDIA_TYPE.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     @Test
     @DisplayName("should return 404 Not Found with the error contract for an unknown route")
     void unknownRoute() throws Exception {
         mockMvc.perform(get("/api/v1/unknown"))
-                .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.NOT_FOUND.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+            .andExpect(status().isNotFound())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.NOT_FOUND.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
     @Test
@@ -134,11 +138,11 @@ class ErrorContractTest {
         // Without the catch-all handler this falls through to Boot's BasicErrorController,
         // which answers with a different JSON shape carrying neither code nor errorId.
         mockMvc.perform(get("/api/v1/test-unexpected-error"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.INTERNAL_ERROR.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.INTERNAL_ERROR))
-                .andExpect(jsonPath("$.errorId").isNotEmpty());
+            .andExpect(status().isInternalServerError())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.INTERNAL_ERROR.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.INTERNAL_ERROR))
+            .andExpect(jsonPath("$.errorId").isNotEmpty());
     }
 
 }

@@ -7,7 +7,7 @@ package io.arpicode.leagueapi.player.dto;
  * to anyone looking at the tournament, so the email stays out.
  */
 public record PlayerSummary(
-        Long id,
-        String username
+    Long id,
+    String username
 ) {
 }

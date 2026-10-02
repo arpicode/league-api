@@ -12,9 +12,9 @@ import java.time.OffsetDateTime;
  *                         promoted; {@code null} when the registration is {@code CONFIRMED}
  */
 public record TournamentRegistrationResponse(
-        Long tournamentId,
-        PlayerSummary player,
-        OffsetDateTime registeredAt,
-        TournamentRegistrationStatus status,
-        Integer waitlistPosition) {
+    Long tournamentId,
+    PlayerSummary player,
+    OffsetDateTime registeredAt,
+    TournamentRegistrationStatus status,
+    Integer waitlistPosition) {
 }

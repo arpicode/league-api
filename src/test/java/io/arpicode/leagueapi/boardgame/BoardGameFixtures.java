@@ -42,12 +42,12 @@ public class BoardGameFixtures {
 
     public long create(String name, int minPlayers, int maxPlayers, Integer avgDurationMin) throws Exception {
         MockHttpServletResponse response = mockMvc.perform(post("/api/v1/boardgames")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"%s", "minPlayers":%d, "maxPlayers":%d, "avgDurationMin":%d}
-                                """.formatted(name, minPlayers, maxPlayers, avgDurationMin)))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"name":"%s", "minPlayers":%d, "maxPlayers":%d, "avgDurationMin":%d}
+                    """.formatted(name, minPlayers, maxPlayers, avgDurationMin)))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse();
 
         return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
     }

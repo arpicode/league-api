@@ -5,7 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -26,23 +30,23 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String ERRORS = "errors";
 
     private static final Map<String, ConstraintMapping> CONSTRAINT_MAPPINGS = Map.of(
-            "uq_player_username_normalized", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
-            "uq_player_email", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS),
-            "uq_board_game_name_normalized", new ConstraintMapping(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS, UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS),
-            "uq_tournament_name_normalized", new ConstraintMapping(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS, UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS),
-            // Normally the ON DELETE RESTRICT direction: creating a tournament for an unknown board
-            // game is rejected by the explicit lookup in TournamentService, which can name the id.
-            //
-            // The insert direction still reaches here when a game is deleted between that lookup and
-            // the insert, since a plain SELECT takes no row lock -- such a request gets this "in use"
-            // message although the game was in fact deleted. Accepted knowingly: the window is one
-            // statement wide, the FK still keeps the data correct, and only the wording is wrong. A
-            // PESSIMISTIC_READ on the lookup would close it, should the warn below ever show it.
-            "fk_tournament_board_game", new ConstraintMapping(ErrorCode.BOARD_GAME_IN_USE, UserMessages.BOARD_GAME_IN_USE),
-            // Safety net only: TournamentRegistrationService checks for the registration first and
-            // can name both ids. The code is the same on both paths so a client handles one code,
-            // whichever path answered; only the wording differs.
-            "pk_tournament_registration", new ConstraintMapping(ErrorCode.TOURNAMENT_REGISTRATION_ALREADY_EXISTS, UserMessages.TOURNAMENT_REGISTRATION_ALREADY_EXISTS)
+        "uq_player_username_normalized", new ConstraintMapping(ErrorCode.USERNAME_ALREADY_EXISTS, UserMessages.USERNAME_ALREADY_EXISTS),
+        "uq_player_email", new ConstraintMapping(ErrorCode.EMAIL_ALREADY_EXISTS, UserMessages.EMAIL_ALREADY_EXISTS),
+        "uq_board_game_name_normalized", new ConstraintMapping(ErrorCode.BOARD_GAME_NAME_ALREADY_EXISTS, UserMessages.BOARD_GAME_NAME_ALREADY_EXISTS),
+        "uq_tournament_name_normalized", new ConstraintMapping(ErrorCode.TOURNAMENT_NAME_ALREADY_EXISTS, UserMessages.TOURNAMENT_NAME_ALREADY_EXISTS),
+        // Normally the ON DELETE RESTRICT direction: creating a tournament for an unknown board
+        // game is rejected by the explicit lookup in TournamentService, which can name the id.
+        //
+        // The insert direction still reaches here when a game is deleted between that lookup and
+        // the insert, since a plain SELECT takes no row lock -- such a request gets this "in use"
+        // message although the game was in fact deleted. Accepted knowingly: the window is one
+        // statement wide, the FK still keeps the data correct, and only the wording is wrong. A
+        // PESSIMISTIC_READ on the lookup would close it, should the warn below ever show it.
+        "fk_tournament_board_game", new ConstraintMapping(ErrorCode.BOARD_GAME_IN_USE, UserMessages.BOARD_GAME_IN_USE),
+        // Safety net only: TournamentRegistrationService checks for the registration first and
+        // can name both ids. The code is the same on both paths so a client handles one code,
+        // whichever path answered; only the wording differs.
+        "pk_tournament_registration", new ConstraintMapping(ErrorCode.TOURNAMENT_REGISTRATION_ALREADY_EXISTS, UserMessages.TOURNAMENT_REGISTRATION_ALREADY_EXISTS)
     );
 
     private record ConstraintMapping(ErrorCode code, String message) {
@@ -105,15 +109,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // Request validation errors (e.g. @Valid)
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex,
-            @NonNull HttpHeaders headers,
-            @NonNull HttpStatusCode status,
-            @NonNull WebRequest request) {
+        MethodArgumentNotValidException ex,
+        @NonNull HttpHeaders headers,
+        @NonNull HttpStatusCode status,
+        @NonNull WebRequest request) {
         List<FieldViolation> violations = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> new FieldViolation(error.getField(), error.getDefaultMessage()))
-                .sorted(Comparator.comparing(FieldViolation::field)
-                        .thenComparing(FieldViolation::message, Comparator.nullsLast(Comparator.naturalOrder())))
-                .toList();
+            .map(error -> new FieldViolation(error.getField(), error.getDefaultMessage()))
+            .sorted(Comparator.comparing(FieldViolation::field)
+                .thenComparing(FieldViolation::message, Comparator.nullsLast(Comparator.naturalOrder())))
+            .toList();
 
         ProblemDetail problem = problem(ErrorCode.VALIDATION_ERROR, UserMessages.VALIDATION_ERROR);
         problem.setProperty(ERRORS, violations);
@@ -127,10 +131,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // here, so they carry the same code/errorId contract as the ones built above.
     @Override
     protected @NonNull ResponseEntity<Object> createResponseEntity(
-            Object body,
-            @NonNull HttpHeaders headers,
-            @NonNull HttpStatusCode statusCode,
-            @NonNull WebRequest request) {
+        Object body,
+        @NonNull HttpHeaders headers,
+        @NonNull HttpStatusCode statusCode,
+        @NonNull WebRequest request) {
         if (body instanceof ProblemDetail problem && !hasCode(problem)) {
             ErrorCode code = codeForStatus(statusCode);
             decorate(problem, code);

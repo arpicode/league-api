@@ -16,8 +16,8 @@ public class TournamentDatesValidator implements ConstraintValidator<TournamentD
         // Mirrors ck_tournament_dates clause A: an end date is meaningless on its own.
         if (request.startsOn() == null) {
             context.buildConstraintViolationWithTemplate("A start date is required when an end date is set")
-                    .addPropertyNode("startsOn")
-                    .addConstraintViolation();
+                .addPropertyNode("startsOn")
+                .addConstraintViolation();
 
             return false;
         }
@@ -25,8 +25,8 @@ public class TournamentDatesValidator implements ConstraintValidator<TournamentD
         // Clause B.
         if (request.endsOn().isBefore(request.startsOn())) {
             context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-                    .addPropertyNode("endsOn")
-                    .addConstraintViolation();
+                .addPropertyNode("endsOn")
+                .addConstraintViolation();
 
             return false;
         }

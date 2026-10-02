@@ -14,8 +14,12 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.nullValue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiIntegrationTest
 @Transactional
@@ -39,15 +43,15 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen(16);
 
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated())
-                .andExpect(header().stringValues("Location", "http://localhost/api/v1/tournaments/%d/registrations/%d".formatted(tournamentId, playerId)))
-                .andExpect(jsonPath("$.tournamentId").value(tournamentId))
-                .andExpect(jsonPath("$.player.id").value(playerId))
-                .andExpect(jsonPath("$.player.username").value("test_player_username"))
-                .andExpect(jsonPath("$.player.email").doesNotExist())
-                .andExpect(jsonPath("$.registeredAt").isNotEmpty())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()))
-                .andExpect(jsonPath("$.waitlistPosition").value(nullValue()));
+            .andExpect(status().isCreated())
+            .andExpect(header().stringValues("Location", "http://localhost/api/v1/tournaments/%d/registrations/%d".formatted(tournamentId, playerId)))
+            .andExpect(jsonPath("$.tournamentId").value(tournamentId))
+            .andExpect(jsonPath("$.player.id").value(playerId))
+            .andExpect(jsonPath("$.player.username").value("test_player_username"))
+            .andExpect(jsonPath("$.player.email").doesNotExist())
+            .andExpect(jsonPath("$.registeredAt").isNotEmpty())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()))
+            .andExpect(jsonPath("$.waitlistPosition").value(nullValue()));
     }
 
     @Test
@@ -59,8 +63,8 @@ class TournamentRegistrationControllerTest {
         tournaments.registerNewPlayers(tournamentBId, 2);
 
         postRegistration(tournamentAId, playerId)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
     }
 
     @Test
@@ -71,9 +75,9 @@ class TournamentRegistrationControllerTest {
         tournaments.registerNewPlayers(tournamentId, 2);
 
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()))
-                .andExpect(jsonPath("$.waitlistPosition").value(1));
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()))
+            .andExpect(jsonPath("$.waitlistPosition").value(1));
     }
 
     @Test
@@ -83,8 +87,8 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen(null);
 
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
     }
 
     @Test
@@ -94,14 +98,14 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen();
 
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         // The detail names both ids, which only the service's explicit check can do: the
         // pk_tournament_registration mapping behind it shares the code but not the wording.
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_ALREADY_EXISTS.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_PLAYER_ALREADY_REGISTERED.formatted(playerId, tournamentId)));
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_ALREADY_EXISTS.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_PLAYER_ALREADY_REGISTERED.formatted(playerId, tournamentId)));
     }
 
     @Test
@@ -111,9 +115,9 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createDraft();
 
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_OPEN.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_OPEN.formatted(TournamentStatus.DRAFT)));
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_OPEN.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_OPEN.formatted(TournamentStatus.DRAFT)));
     }
 
     @Test
@@ -123,9 +127,9 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createInProgress();
 
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_OPEN.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_OPEN.formatted(TournamentStatus.IN_PROGRESS)));
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_OPEN.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_OPEN.formatted(TournamentStatus.IN_PROGRESS)));
     }
 
     @Test
@@ -136,9 +140,9 @@ class TournamentRegistrationControllerTest {
         long playerId = players.create();
 
         postRegistration(Long.MAX_VALUE, playerId)
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     @Test
@@ -148,9 +152,9 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen();
 
         postRegistration(tournamentId, Long.MAX_VALUE)
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Read
@@ -162,11 +166,11 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen();
 
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         getRegistration(tournamentId, playerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waitlistPosition").value(nullValue()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.waitlistPosition").value(nullValue()));
     }
 
     @Test
@@ -180,16 +184,16 @@ class TournamentRegistrationControllerTest {
         long firstPlayerId = players.create();
         long secondPlayerId = players.create();
         postRegistration(tournamentId, firstPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, secondPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         getRegistration(tournamentId, firstPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waitlistPosition").value(1));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.waitlistPosition").value(1));
         getRegistration(tournamentId, secondPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waitlistPosition").value(2));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.waitlistPosition").value(2));
     }
 
     @Test
@@ -204,11 +208,11 @@ class TournamentRegistrationControllerTest {
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         getRegistration(tournamentId, playerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waitlistPosition").value(1));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.waitlistPosition").value(1));
     }
 
     @Test
@@ -223,13 +227,13 @@ class TournamentRegistrationControllerTest {
         long lowerPlayerId = players.create();
         long higherPlayerId = players.create();
         postRegistration(tournamentId, higherPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, lowerPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         getRegistration(tournamentId, lowerPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waitlistPosition").value(2));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.waitlistPosition").value(2));
     }
 
     @Test
@@ -239,9 +243,9 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen();
 
         getRegistration(tournamentId, playerId)
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)));
     }
 
     @Test
@@ -251,9 +255,9 @@ class TournamentRegistrationControllerTest {
         long playerId = players.create();
 
         getRegistration(Long.MAX_VALUE, playerId)
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- List
@@ -270,13 +274,13 @@ class TournamentRegistrationControllerTest {
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         listRegistrations(tournamentId, "")
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.page.totalElements").value(3))
-                .andExpect(jsonPath("$.content[2].player.id").value(playerId))
-                .andExpect(jsonPath("$.content[2].waitlistPosition").value(1));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.page.totalElements").value(3))
+            .andExpect(jsonPath("$.content[2].player.id").value(playerId))
+            .andExpect(jsonPath("$.content[2].waitlistPosition").value(1));
     }
 
     @Test
@@ -289,12 +293,12 @@ class TournamentRegistrationControllerTest {
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         listRegistrations(tournamentId, "page=1&size=3")
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].player.id").value(playerId))
-                .andExpect(jsonPath("$.content[0].waitlistPosition").value(2));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].player.id").value(playerId))
+            .andExpect(jsonPath("$.content[0].waitlistPosition").value(2));
     }
 
     @Test
@@ -305,14 +309,14 @@ class TournamentRegistrationControllerTest {
 
         long playerId = players.create();
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         // Newest player first: the last waitlisted registration heads the only page, and a position
         // derived from where rows fall in the response would no longer be 2.
         listRegistrations(tournamentId, "sort=id.playerId,desc&size=1")
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].player.id").value(playerId))
-                .andExpect(jsonPath("$.content[0].waitlistPosition").value(2));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].player.id").value(playerId))
+            .andExpect(jsonPath("$.content[0].waitlistPosition").value(2));
     }
 
     @Test
@@ -327,14 +331,14 @@ class TournamentRegistrationControllerTest {
         long lowerPlayerId = players.create();
         long higherPlayerId = players.create();
         postRegistration(tournamentId, higherPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, lowerPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         listRegistrations(tournamentId, "")
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[3].player.id").value(lowerPlayerId))
-                .andExpect(jsonPath("$.content[3].waitlistPosition").value(2));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[3].player.id").value(lowerPlayerId))
+            .andExpect(jsonPath("$.content[3].waitlistPosition").value(2));
     }
 
     @Test
@@ -343,16 +347,16 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen();
 
         listRegistrations(tournamentId, "")
-                .andExpect(status().isOk());
+            .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("should return 404 Not Found when listing the registrations of a tournament that does not exist")
     void listTournamentRegistrationsTournamentNotFound() throws Exception {
         listRegistrations(Long.MAX_VALUE, "")
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Delete
@@ -367,13 +371,13 @@ class TournamentRegistrationControllerTest {
         long playerId = players.create();
         long tournamentId = tournaments.createOpen();
         postRegistration(tournamentId, playerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         deleteRegistration(tournamentId, playerId)
-                .andExpect(status().isNoContent());
+            .andExpect(status().isNoContent());
 
         getRegistration(tournamentId, playerId)
-                .andExpect(status().isNotFound());
+            .andExpect(status().isNotFound());
     }
 
     @Test
@@ -385,25 +389,25 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen(2);
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         tournaments.registerNewPlayers(tournamentId, 1);
 
         long firstWaitlistedPlayerId = players.create();
         long secondWaitlistedPlayerId = players.create();
         postRegistration(tournamentId, firstWaitlistedPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, secondWaitlistedPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         deleteRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isNoContent());
+            .andExpect(status().isNoContent());
 
         getRegistration(tournamentId, firstWaitlistedPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
         getRegistration(tournamentId, secondWaitlistedPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
     }
 
     @Test
@@ -415,22 +419,22 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen(2);
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         tournaments.registerNewPlayers(tournamentId, 1);
 
         long lowerPlayerId = players.create();
         long higherPlayerId = players.create();
         postRegistration(tournamentId, higherPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, lowerPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         deleteRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isNoContent());
+            .andExpect(status().isNoContent());
 
         getRegistration(tournamentId, higherPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
     }
 
     @Test
@@ -443,16 +447,16 @@ class TournamentRegistrationControllerTest {
         long withdrawingPlayerId = players.create();
         long remainingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, remainingPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         deleteRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isNoContent());
+            .andExpect(status().isNoContent());
 
         getRegistration(tournamentId, remainingPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
     }
 
     @Test
@@ -465,19 +469,19 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen(2);
         long withdrawingPlayerId = players.create();
         postRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         tournaments.registerNewPlayers(tournamentId, 1);
 
         long waitlistedPlayerId = players.create();
         postRegistration(tournamentId, waitlistedPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         deleteRegistration(tournamentId, withdrawingPlayerId)
-                .andExpect(status().isNoContent());
+            .andExpect(status().isNoContent());
 
         getRegistration(tournamentId, waitlistedPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
     }
 
     @Test
@@ -487,9 +491,9 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createInProgress(playerId);
 
         deleteRegistration(tournamentId, playerId)
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_OPEN.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL.formatted(TournamentStatus.IN_PROGRESS)));
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_OPEN.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL.formatted(TournamentStatus.IN_PROGRESS)));
     }
 
     @Test
@@ -499,9 +503,9 @@ class TournamentRegistrationControllerTest {
         long tournamentId = tournaments.createOpen();
 
         deleteRegistration(tournamentId, playerId)
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)));
     }
 
     @Test
@@ -511,9 +515,9 @@ class TournamentRegistrationControllerTest {
         long playerId = players.create();
 
         deleteRegistration(Long.MAX_VALUE, playerId)
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Capacity changes
@@ -530,23 +534,23 @@ class TournamentRegistrationControllerTest {
         long secondWaitlistedPlayerId = players.create();
         long thirdWaitlistedPlayerId = players.create();
         postRegistration(tournamentId, firstWaitlistedPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, secondWaitlistedPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
         postRegistration(tournamentId, thirdWaitlistedPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         tournaments.changeMaxPlayers(tournamentId, 4);
 
         getRegistration(tournamentId, firstWaitlistedPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
         getRegistration(tournamentId, secondWaitlistedPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
         getRegistration(tournamentId, thirdWaitlistedPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.WAITLISTED.name()));
     }
 
     @Test
@@ -558,23 +562,23 @@ class TournamentRegistrationControllerTest {
         // Created last, so last in line: promoted only if the whole waitlist is.
         long lastWaitlistedPlayerId = players.create();
         postRegistration(tournamentId, lastWaitlistedPlayerId)
-                .andExpect(status().isCreated());
+            .andExpect(status().isCreated());
 
         tournaments.changeMaxPlayers(tournamentId, null);
 
         getRegistration(tournamentId, lastWaitlistedPlayerId)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value(TournamentRegistrationStatus.CONFIRMED.name()));
     }
 
     // -- Helpers
 
     private ResultActions postRegistration(long tournamentId, long playerId) throws Exception {
         return mockMvc.perform(post("/api/v1/tournaments/{id}/registrations", tournamentId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"playerId":%d}
-                        """.formatted(playerId)));
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"playerId":%d}
+                """.formatted(playerId)));
     }
 
     private ResultActions getRegistration(long tournamentId, long playerId) throws Exception {

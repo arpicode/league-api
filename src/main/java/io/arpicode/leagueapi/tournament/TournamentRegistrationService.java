@@ -27,9 +27,9 @@ public class TournamentRegistrationService {
     private final TournamentRepository tournamentRepository;
 
     public TournamentRegistrationService(
-            TournamentRegistrationRepository tournamentRegistrationRepository,
-            PlayerRepository playerRepository,
-            TournamentRepository tournamentRepository
+        TournamentRegistrationRepository tournamentRegistrationRepository,
+        PlayerRepository playerRepository,
+        TournamentRepository tournamentRepository
     ) {
         this.tournamentRegistrationRepository = tournamentRegistrationRepository;
         this.playerRepository = playerRepository;
@@ -47,8 +47,8 @@ public class TournamentRegistrationService {
 
         if (tournamentRegistrationRepository.existsById(tournamentPlayerId)) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_REGISTRATION_ALREADY_EXISTS,
-                    UserMessages.TOURNAMENT_REGISTRATION_PLAYER_ALREADY_REGISTERED.formatted(player.getId(), tournamentId)
+                ErrorCode.TOURNAMENT_REGISTRATION_ALREADY_EXISTS,
+                UserMessages.TOURNAMENT_REGISTRATION_PLAYER_ALREADY_REGISTERED.formatted(player.getId(), tournamentId)
             );
         }
 
@@ -77,13 +77,13 @@ public class TournamentRegistrationService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public TournamentRegistrationResponse getById(long tournamentId, long playerId) {
         TournamentRegistration tournamentRegistration = tournamentRegistrationRepository
-                .findById(new TournamentPlayerId(tournamentId, playerId))
-                .orElseThrow(() -> registrationNotFound(tournamentId, playerId));
+            .findById(new TournamentPlayerId(tournamentId, playerId))
+            .orElseThrow(() -> registrationNotFound(tournamentId, playerId));
 
         return toTournamentRegistrationResponse(
-                tournamentRegistration,
-                tournamentRegistration.getPlayer(),
-                waitlistPosition(tournamentRegistration)
+            tournamentRegistration,
+            tournamentRegistration.getPlayer(),
+            waitlistPosition(tournamentRegistration)
         );
     }
 
@@ -91,22 +91,22 @@ public class TournamentRegistrationService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Page<TournamentRegistrationResponse> list(long tournamentId, Pageable pageable) {
         Page<TournamentRegistration> registrations =
-                tournamentRegistrationRepository.findByTournamentId(tournamentId, pageable);
+            tournamentRegistrationRepository.findByTournamentId(tournamentId, pageable);
 
         // An empty page is either past the end of an existing roster or a missing tournament.
         if (registrations.isEmpty() && !tournamentRepository.existsById(tournamentId)) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_NOT_FOUND,
-                    UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
             );
         }
 
         Map<Long, Integer> positions = waitlistPositions(tournamentId, registrations.getContent());
 
         return registrations.map(registration -> toTournamentRegistrationResponse(
-                registration,
-                registration.getPlayer(),
-                positions.get(registration.getId().getPlayerId())
+            registration,
+            registration.getPlayer(),
+            positions.get(registration.getId().getPlayerId())
         ));
     }
 
@@ -122,11 +122,11 @@ public class TournamentRegistrationService {
 
         // The lock just proved the tournament exists, so a miss here can only be the registration.
         TournamentRegistration tournamentRegistration = tournamentRegistrationRepository
-                .findById(new TournamentPlayerId(tournamentId, playerId))
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND,
-                        UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)
-                ));
+            .findById(new TournamentPlayerId(tournamentId, playerId))
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND,
+                UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)
+            ));
 
         boolean freesAPlace = tournamentRegistration.isConfirmed();
 
@@ -150,7 +150,7 @@ public class TournamentRegistrationService {
     // while OPEN: the roster is fixed from IN_PROGRESS.
     public void applyMaxPlayersChange(Tournament tournament) {
         long confirmedCount = tournamentRegistrationRepository
-                .countByStatusAndTournamentId(TournamentRegistrationStatus.CONFIRMED, tournament.getId());
+            .countByStatusAndTournamentId(TournamentRegistrationStatus.CONFIRMED, tournament.getId());
 
         tournament.assertMaxPlayersNotBelow(confirmedCount);
 
@@ -168,9 +168,9 @@ public class TournamentRegistrationService {
 
     private void promoteFromWaitlist(long tournamentId, Limit places) {
         tournamentRegistrationRepository
-                .findByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
-                        tournamentId, TournamentRegistrationStatus.WAITLISTED, places)
-                .forEach(TournamentRegistration::promote);
+            .findByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
+                tournamentId, TournamentRegistrationStatus.WAITLISTED, places)
+            .forEach(TournamentRegistration::promote);
     }
 
     // The tournament is the parent resource in the URL, so a missing one is reported as such rather
@@ -178,13 +178,13 @@ public class TournamentRegistrationService {
     private BusinessException registrationNotFound(long tournamentId, long playerId) {
         if (!tournamentRepository.existsById(tournamentId)) {
             return new BusinessException(
-                    ErrorCode.TOURNAMENT_NOT_FOUND,
-                    UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
             );
         }
         return new BusinessException(
-                ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND,
-                UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)
+            ErrorCode.TOURNAMENT_REGISTRATION_NOT_FOUND,
+            UserMessages.TOURNAMENT_REGISTRATION_NOT_FOUND.formatted(playerId, tournamentId)
         );
     }
 
@@ -195,54 +195,54 @@ public class TournamentRegistrationService {
 
         TournamentPlayerId id = tournamentRegistration.getId();
         long position = tournamentRegistrationRepository
-                .findWaitlistPosition(id.getTournamentId(), id.getPlayerId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "Registration (tournament %d, player %d) is WAITLISTED but has no waitlist position"
-                                .formatted(id.getTournamentId(), id.getPlayerId())));
+            .findWaitlistPosition(id.getTournamentId(), id.getPlayerId())
+            .orElseThrow(() -> new IllegalStateException(
+                "Registration (tournament %d, player %d) is WAITLISTED but has no waitlist position"
+                    .formatted(id.getTournamentId(), id.getPlayerId())));
         return Math.toIntExact(position);
     }
 
     private Map<Long, Integer> waitlistPositions(long tournamentId, List<TournamentRegistration> registrations) {
         List<Long> waitlistedPlayerIds = registrations.stream()
-                .filter(registration -> !registration.isConfirmed())
-                .map(registration -> registration.getId().getPlayerId())
-                .toList();
+            .filter(registration -> !registration.isConfirmed())
+            .map(registration -> registration.getId().getPlayerId())
+            .toList();
 
         if (waitlistedPlayerIds.isEmpty()) {
             return Map.of();
         }
 
         return tournamentRegistrationRepository.findWaitlistPositions(tournamentId, waitlistedPlayerIds).stream()
-                .collect(Collectors.toMap(
-                        TournamentRegistrationRepository.WaitlistPosition::getPlayerId,
-                        position -> Math.toIntExact(position.getPosition())
-                ));
+            .collect(Collectors.toMap(
+                TournamentRegistrationRepository.WaitlistPosition::getPlayerId,
+                position -> Math.toIntExact(position.getPosition())
+            ));
     }
 
     private TournamentRegistrationResponse toTournamentRegistrationResponse(TournamentRegistration tournamentRegistration, Player player, Integer waitlistPosition) {
         return new TournamentRegistrationResponse(
-                tournamentRegistration.getId().getTournamentId(),
-                new PlayerSummary(player.getId(), player.getUsername()),
-                tournamentRegistration.getRegisteredAt(),
-                tournamentRegistration.getStatus(),
-                waitlistPosition
+            tournamentRegistration.getId().getTournamentId(),
+            new PlayerSummary(player.getId(), player.getUsername()),
+            tournamentRegistration.getRegisteredAt(),
+            tournamentRegistration.getStatus(),
+            waitlistPosition
         );
     }
 
     private Player findPlayer(long id) {
         return playerRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.PLAYER_NOT_FOUND,
-                        UserMessages.PLAYER_NOT_FOUND.formatted(id)
-                ));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.PLAYER_NOT_FOUND,
+                UserMessages.PLAYER_NOT_FOUND.formatted(id)
+            ));
     }
 
     private Tournament findTournamentForUpdate(long id) {
         return tournamentRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.TOURNAMENT_NOT_FOUND,
-                        UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)
-                ));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)
+            ));
     }
 
 }

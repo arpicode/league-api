@@ -31,15 +31,15 @@ public class PlayerService {
     @Transactional(readOnly = true)
     public Page<PlayerResponse> list(Pageable pageable) {
         return playerRepository.findAll(pageable)
-                .map(this::toPlayerResponse);
+            .map(this::toPlayerResponse);
     }
 
     @Transactional(readOnly = true)
     public PlayerResponse getById(long id) {
         Player player = playerRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.PLAYER_NOT_FOUND,
-                        UserMessages.PLAYER_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.PLAYER_NOT_FOUND,
+                UserMessages.PLAYER_NOT_FOUND.formatted(id)));
 
         return toPlayerResponse(player);
     }
@@ -47,9 +47,9 @@ public class PlayerService {
     @Transactional
     public PlayerResponse update(long id, PlayerRequest playerRequest) {
         Player player = playerRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.PLAYER_NOT_FOUND,
-                        UserMessages.PLAYER_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.PLAYER_NOT_FOUND,
+                UserMessages.PLAYER_NOT_FOUND.formatted(id)));
 
         player.setUsername(playerRequest.username());
         player.setEmail(playerRequest.email());
@@ -62,20 +62,20 @@ public class PlayerService {
     @Transactional
     public void delete(long id) {
         Player player = playerRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.PLAYER_NOT_FOUND,
-                        UserMessages.PLAYER_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.PLAYER_NOT_FOUND,
+                UserMessages.PLAYER_NOT_FOUND.formatted(id)));
 
         playerRepository.delete(player);
     }
 
     private PlayerResponse toPlayerResponse(Player player) {
         return new PlayerResponse(
-                player.getId(),
-                player.getUsername(),
-                player.getEmail(),
-                player.getCreatedAt(),
-                player.getUpdatedAt());
+            player.getId(),
+            player.getUsername(),
+            player.getEmail(),
+            player.getCreatedAt(),
+            player.getUpdatedAt());
     }
 
 }

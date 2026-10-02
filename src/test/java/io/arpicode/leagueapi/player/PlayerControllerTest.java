@@ -18,8 +18,13 @@ import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ApiIntegrationTest
 @Transactional
@@ -37,18 +42,18 @@ class PlayerControllerTest {
     @DisplayName("should create a new player when valid data is provided")
     void createPlayer() throws Exception {
         MockHttpServletResponse response = postPlayer("test_user", "test_user@example.com")
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value("test_user"))
-                .andExpect(jsonPath("$.email").value("test_user@example.com"))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty())
-                .andReturn().getResponse();
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value("test_user"))
+            .andExpect(jsonPath("$.email").value("test_user@example.com"))
+            .andExpect(jsonPath("$.createdAt").isNotEmpty())
+            .andExpect(jsonPath("$.updatedAt").isNotEmpty())
+            .andReturn().getResponse();
 
         int id = ((Number) JsonPath.read(response.getContentAsString(), "$.id")).intValue();
 
         assertThat(response.getHeader("Location"))
-                .as("Location of the created player")
-                .isEqualTo("http://localhost/api/v1/players/%d".formatted(id));
+            .as("Location of the created player")
+            .isEqualTo("http://localhost/api/v1/players/%d".formatted(id));
     }
 
     @Test
@@ -58,9 +63,9 @@ class PlayerControllerTest {
         // uniqueness is enforced on the generated username_normalized column instead.
         // The email has no such column, so PlayerRequest still canonicalises it.
         postPlayer("  Test_User ", "  Test_User@Example.Com ")
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value("Test_User"))
-                .andExpect(jsonPath("$.email").value("test_user@example.com"));
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value("Test_User"))
+            .andExpect(jsonPath("$.email").value("test_user@example.com"));
     }
 
     // -- Create: uniqueness
@@ -72,11 +77,11 @@ class PlayerControllerTest {
         players.create("test_user", "test_user@example.com");
 
         postPlayer("test_user", "test_user_unique@example.com")
-                .andExpect(status().isConflict())
-                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value(ErrorCode.USERNAME_ALREADY_EXISTS.name()))
-                .andExpect(jsonPath("$.errorId").isNotEmpty())
-                .andExpect(jsonPath("$.detail").value(UserMessages.USERNAME_ALREADY_EXISTS));
+            .andExpect(status().isConflict())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value(ErrorCode.USERNAME_ALREADY_EXISTS.name()))
+            .andExpect(jsonPath("$.errorId").isNotEmpty())
+            .andExpect(jsonPath("$.detail").value(UserMessages.USERNAME_ALREADY_EXISTS));
     }
 
     @Test
@@ -86,9 +91,9 @@ class PlayerControllerTest {
         players.create("test_user", "test_user@example.com");
 
         postPlayer("TEST_USER", "test_user_unique@example.com")
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.USERNAME_ALREADY_EXISTS.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.USERNAME_ALREADY_EXISTS));
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.USERNAME_ALREADY_EXISTS.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.USERNAME_ALREADY_EXISTS));
     }
 
     @Test
@@ -98,9 +103,9 @@ class PlayerControllerTest {
         players.create("test_user", "test_user@example.com");
 
         postPlayer("test_user_unique", "test_user@example.com")
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
     }
 
     @Test
@@ -110,9 +115,9 @@ class PlayerControllerTest {
         players.create("test_user", "test_user@example.com");
 
         postPlayer("test_user_unique", "TEST_USER@EXAMPLE.COM")
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
     }
 
     // -- Create: field validation
@@ -121,22 +126,22 @@ class PlayerControllerTest {
     @DisplayName("should return 400 Bad Request when trying to create a player with username that is too short")
     void createPlayerWithInvalidDataTooShortUsername() throws Exception {
         postPlayer("te", "test_user@example.com")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
-                .andExpect(jsonPath("$.errors[0].field").value("username"))
-                .andExpect(jsonPath("$.errors[0].message")
-                        .value("Username must be between 3 and 50 characters"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+            .andExpect(jsonPath("$.errors[0].field").value("username"))
+            .andExpect(jsonPath("$.errors[0].message")
+                .value("Username must be between 3 and 50 characters"));
     }
 
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a player with username that is too long")
     void createPlayerWithInvalidDataTooLongUsername() throws Exception {
         postPlayer("t".repeat(51), "test_user@example.com")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
-                .andExpect(jsonPath("$.errors[0].field").value("username"))
-                .andExpect(jsonPath("$.errors[0].message")
-                        .value("Username must be between 3 and 50 characters"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+            .andExpect(jsonPath("$.errors[0].field").value("username"))
+            .andExpect(jsonPath("$.errors[0].message")
+                .value("Username must be between 3 and 50 characters"));
     }
 
     @Test
@@ -144,32 +149,32 @@ class PlayerControllerTest {
     void createPlayerWithInvalidDataBlankUsername() throws Exception {
         // Two violations on the same field; the handler sorts them, so the order is a contract.
         postPlayer("", "test_user@example.com")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
-                .andExpect(jsonPath("$.errors[0].field").value("username"))
-                .andExpect(jsonPath("$.errors[0].message").value("Username cannot be blank"))
-                .andExpect(jsonPath("$.errors[1].message")
-                        .value("Username must be between 3 and 50 characters"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+            .andExpect(jsonPath("$.errors[0].field").value("username"))
+            .andExpect(jsonPath("$.errors[0].message").value("Username cannot be blank"))
+            .andExpect(jsonPath("$.errors[1].message")
+                .value("Username must be between 3 and 50 characters"));
     }
 
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a player with non valid email")
     void createPlayerWithInvalidDataNonValidEmail() throws Exception {
         postPlayer("test_user", "test_user_at_example.com")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
-                .andExpect(jsonPath("$.errors[0].field").value("email"))
-                .andExpect(jsonPath("$.errors[0].message").value("Email should be valid"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+            .andExpect(jsonPath("$.errors[0].field").value("email"))
+            .andExpect(jsonPath("$.errors[0].message").value("Email should be valid"));
     }
 
     @Test
     @DisplayName("should return 400 Bad Request when trying to create a player with a blank email")
     void createPlayerWithInvalidDataBlankEmail() throws Exception {
         postPlayer("test_user", "")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
-                .andExpect(jsonPath("$.errors[0].field").value("email"))
-                .andExpect(jsonPath("$.errors[0].message").value("Email cannot be blank"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+            .andExpect(jsonPath("$.errors[0].field").value("email"))
+            .andExpect(jsonPath("$.errors[0].message").value("Email cannot be blank"));
     }
 
     @Test
@@ -181,12 +186,12 @@ class PlayerControllerTest {
         String longEmail = "a".repeat(60) + "@" + ("b".repeat(63) + ".").repeat(3) + "com";
 
         postPlayer("test_user", longEmail)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
-                .andExpect(jsonPath("$.errors.length()").value(1))
-                .andExpect(jsonPath("$.errors[0].field").value("email"))
-                .andExpect(jsonPath("$.errors[0].message")
-                        .value("Email must not exceed 255 characters"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorCode.VALIDATION_ERROR.name()))
+            .andExpect(jsonPath("$.errors.length()").value(1))
+            .andExpect(jsonPath("$.errors[0].field").value("email"))
+            .andExpect(jsonPath("$.errors[0].message")
+                .value("Email must not exceed 255 characters"));
     }
 
     // -- Read
@@ -199,12 +204,12 @@ class PlayerControllerTest {
         long id = players.create("test_user", "test_user@example.com");
 
         mockMvc.perform(get("/api/v1/players/{id}", id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.username").value("test_user"))
-                .andExpect(jsonPath("$.email").value("test_user@example.com"))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.updatedAt").isNotEmpty());
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.username").value("test_user"))
+            .andExpect(jsonPath("$.email").value("test_user@example.com"))
+            .andExpect(jsonPath("$.createdAt").isNotEmpty())
+            .andExpect(jsonPath("$.updatedAt").isNotEmpty());
     }
 
     @Test
@@ -217,10 +222,10 @@ class PlayerControllerTest {
         // Asserting which players come back, not just how many: a count alone would pass
         // even if the endpoint returned the wrong rows or mapped the wrong fields.
         mockMvc.perform(get("/api/v1/players"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[*].username",
-                        contains("test_user_0", "test_user_1", "test_user_2")))
-                .andExpect(jsonPath("$.page.totalElements").value(3));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[*].username",
+                contains("test_user_0", "test_user_1", "test_user_2")))
+            .andExpect(jsonPath("$.page.totalElements").value(3));
     }
 
     @Test
@@ -232,20 +237,20 @@ class PlayerControllerTest {
 
         // Ignoring the Pageable argument would return all three rows here.
         mockMvc.perform(get("/api/v1/players?page=1&size=2"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].username").value("test_user_2"))
-                .andExpect(jsonPath("$.page.number").value(1))
-                .andExpect(jsonPath("$.page.totalElements").value(3));
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].username").value("test_user_2"))
+            .andExpect(jsonPath("$.page.number").value(1))
+            .andExpect(jsonPath("$.page.totalElements").value(3));
     }
 
     @Test
     @DisplayName("should return 404 Not Found when trying to get a player that does not exist")
     void getPlayerNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/players/{id}", Long.MAX_VALUE))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Update
@@ -258,28 +263,28 @@ class PlayerControllerTest {
         // since Postgres now() is frozen for the life of a transaction and would otherwise
         // make updatedAt look unchanged even when the update trigger fires correctly.
         MockHttpServletResponse createResponse = postPlayer("test_user", "test_user@example.com")
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
+            .andExpect(status().isCreated())
+            .andReturn().getResponse();
 
         Number id = JsonPath.read(createResponse.getContentAsString(), "$.id");
         String createdAt = JsonPath.read(createResponse.getContentAsString(), "$.createdAt");
         OffsetDateTime oldUpdatedAt =
-                OffsetDateTime.parse(JsonPath.read(createResponse.getContentAsString(), "$.updatedAt"));
+            OffsetDateTime.parse(JsonPath.read(createResponse.getContentAsString(), "$.updatedAt"));
 
         MockHttpServletResponse updateResponse = mockMvc.perform(put("/api/v1/players/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"updated_user","email":"updated_user@example.com"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id.intValue()))
-                .andExpect(jsonPath("$.username").value("updated_user"))
-                .andExpect(jsonPath("$.email").value("updated_user@example.com"))
-                .andExpect(jsonPath("$.createdAt").value(createdAt))
-                .andReturn().getResponse();
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"updated_user","email":"updated_user@example.com"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id.intValue()))
+            .andExpect(jsonPath("$.username").value("updated_user"))
+            .andExpect(jsonPath("$.email").value("updated_user@example.com"))
+            .andExpect(jsonPath("$.createdAt").value(createdAt))
+            .andReturn().getResponse();
 
         OffsetDateTime newUpdatedAt =
-                OffsetDateTime.parse(JsonPath.read(updateResponse.getContentAsString(), "$.updatedAt"));
+            OffsetDateTime.parse(JsonPath.read(updateResponse.getContentAsString(), "$.updatedAt"));
 
         assertThat(newUpdatedAt).isAfter(oldUpdatedAt);
     }
@@ -293,26 +298,26 @@ class PlayerControllerTest {
 
         // Different code path from create: the violation surfaces at saveAndFlush, not persist.
         mockMvc.perform(put("/api/v1/players/{id}", otherId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"other_user","email":"test_user@example.com"}
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"other_user","email":"test_user@example.com"}
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.EMAIL_ALREADY_EXISTS.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.EMAIL_ALREADY_EXISTS));
     }
 
     @Test
     @DisplayName("should return 404 Not Found when trying to update a player that does not exist")
     void updatePlayerNotFound() throws Exception {
         mockMvc.perform(put("/api/v1/players/{id}", Long.MAX_VALUE)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"updated_user","email":"updated_user@example.com"}
-                                """))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"updated_user","email":"updated_user@example.com"}
+                    """))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Delete
@@ -323,31 +328,31 @@ class PlayerControllerTest {
         long id = players.create("test_user", "test_user@example.com");
 
         mockMvc.perform(delete("/api/v1/players/{id}", id))
-                .andExpect(status().isNoContent());
+            .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/v1/players/{id}", id))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(id)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(id)));
     }
 
     @Test
     @DisplayName("should return 404 Not Found when trying to delete a player that does not exist")
     void deletePlayerNotFound() throws Exception {
         mockMvc.perform(delete("/api/v1/players/{id}", Long.MAX_VALUE))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
-                .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.PLAYER_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.PLAYER_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
     // -- Helpers
 
     private ResultActions postPlayer(String username, String email) throws Exception {
         return mockMvc.perform(post("/api/v1/players")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"username":"%s","email":"%s"}
-                        """.formatted(username, email)));
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"username":"%s","email":"%s"}
+                """.formatted(username, email)));
     }
 
 }

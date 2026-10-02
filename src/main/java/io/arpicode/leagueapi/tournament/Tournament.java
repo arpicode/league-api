@@ -85,8 +85,8 @@ public class Tournament {
     public void transitionTo(TournamentStatus target) {
         if (!status.canTransitionTo(target)) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_ILLEGAL_TRANSITION,
-                    UserMessages.TOURNAMENT_ILLEGAL_TRANSITION.formatted(status, target));
+                ErrorCode.TOURNAMENT_ILLEGAL_TRANSITION,
+                UserMessages.TOURNAMENT_ILLEGAL_TRANSITION.formatted(status, target));
         }
         this.status = target;
     }
@@ -97,8 +97,8 @@ public class Tournament {
     public void assertDeletable() {
         if (status != TournamentStatus.DRAFT) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_NOT_DELETABLE,
-                    UserMessages.TOURNAMENT_NOT_DELETABLE.formatted(status));
+                ErrorCode.TOURNAMENT_NOT_DELETABLE,
+                UserMessages.TOURNAMENT_NOT_DELETABLE.formatted(status));
         }
     }
 
@@ -108,8 +108,8 @@ public class Tournament {
     public void assertOpenForRegistration() {
         if (this.status != TournamentStatus.OPEN) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_NOT_OPEN,
-                    UserMessages.TOURNAMENT_NOT_OPEN.formatted(this.getStatus())
+                ErrorCode.TOURNAMENT_NOT_OPEN,
+                UserMessages.TOURNAMENT_NOT_OPEN.formatted(this.getStatus())
             );
         }
     }
@@ -119,8 +119,8 @@ public class Tournament {
     public void assertOpenForWithdrawal() {
         if (this.status != TournamentStatus.OPEN) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_NOT_OPEN,
-                    UserMessages.TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL.formatted(this.getStatus())
+                ErrorCode.TOURNAMENT_NOT_OPEN,
+                UserMessages.TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL.formatted(this.getStatus())
             );
         }
     }
@@ -130,8 +130,8 @@ public class Tournament {
     public void assertMaxPlayersNotBelow(long confirmedPlayers) {
         if (maxPlayers != null && maxPlayers < confirmedPlayers) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED,
-                    UserMessages.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED.formatted(confirmedPlayers)
+                ErrorCode.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED,
+                UserMessages.TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED.formatted(confirmedPlayers)
             );
         }
     }
@@ -142,8 +142,8 @@ public class Tournament {
     public void assertInProgress() {
         if (this.status != TournamentStatus.IN_PROGRESS) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_NOT_IN_PROGRESS,
-                    UserMessages.TOURNAMENT_NOT_IN_PROGRESS_FOR_GAME_MATCH.formatted(this.getStatus())
+                ErrorCode.TOURNAMENT_NOT_IN_PROGRESS,
+                UserMessages.TOURNAMENT_NOT_IN_PROGRESS_FOR_GAME_MATCH.formatted(this.getStatus())
             );
         }
     }
@@ -155,15 +155,15 @@ public class Tournament {
     // changeBoardGame() follows.
     public void replaceDetails(@NonNull String name, Short maxPlayers, LocalDate startsOn, LocalDate endsOn) {
         if (name.equals(this.name)
-                && Objects.equals(maxPlayers, this.maxPlayers)
-                && Objects.equals(startsOn, this.startsOn)
-                && Objects.equals(endsOn, this.endsOn)) {
+            && Objects.equals(maxPlayers, this.maxPlayers)
+            && Objects.equals(startsOn, this.startsOn)
+            && Objects.equals(endsOn, this.endsOn)) {
             return;
         }
         if (status.isTerminal()) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_LOCKED,
-                    UserMessages.TOURNAMENT_LOCKED.formatted(status));
+                ErrorCode.TOURNAMENT_LOCKED,
+                UserMessages.TOURNAMENT_LOCKED.formatted(status));
         }
         this.name = name;
         this.maxPlayers = maxPlayers;
@@ -181,8 +181,8 @@ public class Tournament {
         }
         if (status != TournamentStatus.DRAFT) {
             throw new BusinessException(
-                    ErrorCode.TOURNAMENT_BOARD_GAME_LOCKED,
-                    UserMessages.TOURNAMENT_BOARD_GAME_LOCKED.formatted(status));
+                ErrorCode.TOURNAMENT_BOARD_GAME_LOCKED,
+                UserMessages.TOURNAMENT_BOARD_GAME_LOCKED.formatted(status));
         }
         this.boardGame = target;
     }

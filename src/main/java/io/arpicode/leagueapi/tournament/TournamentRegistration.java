@@ -1,7 +1,19 @@
 package io.arpicode.leagueapi.tournament;
 
 import io.arpicode.leagueapi.player.Player;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.MapsId;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -58,8 +70,8 @@ public class TournamentRegistration implements Persistable<TournamentPlayerId> {
     public void promote() {
         if (status != TournamentRegistrationStatus.WAITLISTED) {
             throw new IllegalStateException(
-                    "Cannot promote registration (tournament %d, player %d): status is %s, expected WAITLISTED"
-                            .formatted(id.getTournamentId(), id.getPlayerId(), status));
+                "Cannot promote registration (tournament %d, player %d): status is %s, expected WAITLISTED"
+                    .formatted(id.getTournamentId(), id.getPlayerId(), status));
         }
         status = TournamentRegistrationStatus.CONFIRMED;
     }

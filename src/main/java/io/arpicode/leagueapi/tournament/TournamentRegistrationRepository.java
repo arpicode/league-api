@@ -30,21 +30,21 @@ public interface TournamentRegistrationRepository extends JpaRepository<Tourname
     // The head of the waitlist, in the same order findWaitlistPosition ranks it: registered_at, then
     // player_id to break ties. The limit is the number of places being filled.
     List<TournamentRegistration> findByTournamentIdAndStatusOrderByRegisteredAtAscIdPlayerIdAsc(
-            Long tournamentId, TournamentRegistrationStatus status, Limit limit);
+        Long tournamentId, TournamentRegistrationStatus status, Limit limit);
 
     List<TournamentRegistration> findByTournamentIdAndStatus(Long tournamentId, TournamentRegistrationStatus status);
 
     // A waitlisted registration's position is its rank in the order V009 defines: registered_at,
     // then player_id to break ties. Empty when the player is not on the tournament's waitlist.
     @Query(value = """
-            SELECT ranked.position
-            FROM (SELECT player_id,
-                         ROW_NUMBER() OVER (ORDER BY registered_at, player_id) AS position
-                    FROM league.tournament_registration
-                   WHERE tournament_id = :tournamentId
-                     AND status = 'WAITLISTED') ranked
-            WHERE ranked.player_id = :playerId
-            """, nativeQuery = true)
+        SELECT ranked.position
+        FROM (SELECT player_id,
+                     ROW_NUMBER() OVER (ORDER BY registered_at, player_id) AS position
+                FROM league.tournament_registration
+               WHERE tournament_id = :tournamentId
+                 AND status = 'WAITLISTED') ranked
+        WHERE ranked.player_id = :playerId
+        """, nativeQuery = true)
     Optional<Long> findWaitlistPosition(@Param("tournamentId") Long tournamentId,
                                         @Param("playerId") Long playerId);
 
@@ -53,14 +53,14 @@ public interface TournamentRegistrationRepository extends JpaRepository<Tourname
     // are quoted because Postgres folds unquoted ones to lowercase, which WaitlistPosition's getters
     // would not match.
     @Query(value = """
-            SELECT ranked.player_id AS "playerId", ranked.position AS "position"
-            FROM (SELECT player_id,
-                         ROW_NUMBER() OVER (ORDER BY registered_at, player_id) AS position
-                    FROM league.tournament_registration
-                   WHERE tournament_id = :tournamentId
-                     AND status = 'WAITLISTED') ranked
-            WHERE ranked.player_id IN (:playerIds)
-            """, nativeQuery = true)
+        SELECT ranked.player_id AS "playerId", ranked.position AS "position"
+        FROM (SELECT player_id,
+                     ROW_NUMBER() OVER (ORDER BY registered_at, player_id) AS position
+                FROM league.tournament_registration
+               WHERE tournament_id = :tournamentId
+                 AND status = 'WAITLISTED') ranked
+        WHERE ranked.player_id IN (:playerIds)
+        """, nativeQuery = true)
     List<WaitlistPosition> findWaitlistPositions(@Param("tournamentId") Long tournamentId,
                                                  @Param("playerIds") Collection<Long> playerIds);
 

@@ -3,7 +3,11 @@ package io.arpicode.leagueapi.boardgame.dto;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * Asserts that a board game's player bounds are consistent, i.e. {@code maxPlayers >= minPlayers}.

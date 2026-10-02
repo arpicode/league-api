@@ -19,8 +19,8 @@ public class PlayerRangeValidator implements ConstraintValidator<PlayerRange, Bo
         // so it would reach the client as a 400 with an empty "errors" array.
         context.disableDefaultConstraintViolation();
         context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-                .addPropertyNode("maxPlayers")
-                .addConstraintViolation();
+            .addPropertyNode("maxPlayers")
+            .addConstraintViolation();
 
         return false;
     }

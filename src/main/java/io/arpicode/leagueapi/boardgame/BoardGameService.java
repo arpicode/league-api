@@ -32,15 +32,15 @@ public class BoardGameService {
     @Transactional(readOnly = true)
     public Page<BoardGameResponse> list(Pageable pageable) {
         return boardGameRepository.findAll(pageable)
-                .map(this::toBoardGameResponse);
+            .map(this::toBoardGameResponse);
     }
 
     @Transactional(readOnly = true)
     public BoardGameResponse getById(long id) {
         BoardGame boardGame = boardGameRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.BOARD_GAME_NOT_FOUND,
-                        UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.BOARD_GAME_NOT_FOUND,
+                UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
 
         return toBoardGameResponse(boardGame);
     }
@@ -48,9 +48,9 @@ public class BoardGameService {
     @Transactional
     public BoardGameResponse update(long id, BoardGameRequest boardGameRequest) {
         BoardGame boardGame = boardGameRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.BOARD_GAME_NOT_FOUND,
-                        UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.BOARD_GAME_NOT_FOUND,
+                UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
 
         boardGame.setName(boardGameRequest.name());
         boardGame.setMinPlayers(boardGameRequest.minPlayers());
@@ -65,22 +65,22 @@ public class BoardGameService {
     @Transactional
     public void delete(long id) {
         BoardGame boardGame = boardGameRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.BOARD_GAME_NOT_FOUND,
-                        UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.BOARD_GAME_NOT_FOUND,
+                UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
 
         boardGameRepository.delete(boardGame);
     }
 
     private BoardGameResponse toBoardGameResponse(BoardGame boardGame) {
         return new BoardGameResponse(
-                boardGame.getId(),
-                boardGame.getName(),
-                boardGame.getMinPlayers(),
-                boardGame.getMaxPlayers(),
-                boardGame.getAvgDurationMin(),
-                boardGame.getCreatedAt(),
-                boardGame.getUpdatedAt()
+            boardGame.getId(),
+            boardGame.getName(),
+            boardGame.getMinPlayers(),
+            boardGame.getMaxPlayers(),
+            boardGame.getAvgDurationMin(),
+            boardGame.getCreatedAt(),
+            boardGame.getUpdatedAt()
         );
     }
 }

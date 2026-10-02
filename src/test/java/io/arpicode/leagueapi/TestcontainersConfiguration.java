@@ -20,7 +20,7 @@ public class TestcontainersConfiguration {
         // database collates by byte value while a dev or prod database pinned to ICU
         // does not, and ordering assertions would only hold in one of them.
         return new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))
-                .withEnv("POSTGRES_INITDB_ARGS", "--locale-provider=icu --icu-locale=und --encoding=UTF8");
+            .withEnv("POSTGRES_INITDB_ARGS", "--locale-provider=icu --icu-locale=und --encoding=UTF8");
     }
 
 }

@@ -24,9 +24,9 @@ public class TournamentService {
     private final TournamentRegistrationService tournamentRegistrationService;
 
     public TournamentService(
-            TournamentRepository tournamentRepository,
-            BoardGameRepository boardGameRepository,
-            TournamentRegistrationService tournamentRegistrationService
+        TournamentRepository tournamentRepository,
+        BoardGameRepository boardGameRepository,
+        TournamentRegistrationService tournamentRegistrationService
     ) {
         this.tournamentRepository = tournamentRepository;
         this.boardGameRepository = boardGameRepository;
@@ -41,10 +41,10 @@ public class TournamentService {
 
         Tournament tournament = new Tournament(boardGame, tournamentCreateRequest.name());
         tournament.replaceDetails(
-                tournamentCreateRequest.name(),
-                tournamentCreateRequest.maxPlayers(),
-                tournamentCreateRequest.startsOn(),
-                tournamentCreateRequest.endsOn());
+            tournamentCreateRequest.name(),
+            tournamentCreateRequest.maxPlayers(),
+            tournamentCreateRequest.startsOn(),
+            tournamentCreateRequest.endsOn());
 
         Tournament saved = tournamentRepository.save(tournament);
 
@@ -54,15 +54,15 @@ public class TournamentService {
     @Transactional(readOnly = true)
     public Page<TournamentResponse> list(Pageable pageable) {
         return tournamentRepository.findAll(pageable)
-                .map(this::toTournamentResponse);
+            .map(this::toTournamentResponse);
     }
 
     @Transactional(readOnly = true)
     public TournamentResponse getById(long id) {
         Tournament tournament = tournamentRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.TOURNAMENT_NOT_FOUND,
-                        UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
 
         return toTournamentResponse(tournament);
     }
@@ -74,9 +74,9 @@ public class TournamentService {
     @Transactional
     public TournamentResponse update(long id, TournamentUpdateRequest tournamentUpdateRequest) {
         Tournament tournament = tournamentRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.TOURNAMENT_NOT_FOUND,
-                        UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
         BoardGame boardGame = findBoardGame(tournamentUpdateRequest.boardGameId());
         Short previousMaxPlayers = tournament.getMaxPlayers();
         TournamentStatus previousStatus = tournament.getStatus();
@@ -87,10 +87,10 @@ public class TournamentService {
         // the transition first would reject both against the status they are moving to.
         tournament.changeBoardGame(boardGame);
         tournament.replaceDetails(
-                tournamentUpdateRequest.name(),
-                tournamentUpdateRequest.maxPlayers(),
-                tournamentUpdateRequest.startsOn(),
-                tournamentUpdateRequest.endsOn());
+            tournamentUpdateRequest.name(),
+            tournamentUpdateRequest.maxPlayers(),
+            tournamentUpdateRequest.startsOn(),
+            tournamentUpdateRequest.endsOn());
         if (!Objects.equals(previousMaxPlayers, tournament.getMaxPlayers())) {
             tournamentRegistrationService.applyMaxPlayersChange(tournament);
         }
@@ -114,9 +114,9 @@ public class TournamentService {
     @Transactional
     public void delete(long id) {
         Tournament tournament = tournamentRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.TOURNAMENT_NOT_FOUND,
-                        UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
 
         tournament.assertDeletable();
 
@@ -125,24 +125,24 @@ public class TournamentService {
 
     private BoardGame findBoardGame(long id) {
         return boardGameRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.BOARD_GAME_NOT_FOUND,
-                        UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
+            .orElseThrow(() -> new BusinessException(
+                ErrorCode.BOARD_GAME_NOT_FOUND,
+                UserMessages.BOARD_GAME_NOT_FOUND.formatted(id)));
     }
 
     private TournamentResponse toTournamentResponse(Tournament tournament) {
         BoardGame boardGame = tournament.getBoardGame();
 
         return new TournamentResponse(
-                tournament.getId(),
-                new BoardGameSummary(boardGame.getId(), boardGame.getName()),
-                tournament.getName(),
-                tournament.getStatus(),
-                tournament.getMaxPlayers(),
-                tournament.getStartsOn(),
-                tournament.getEndsOn(),
-                tournament.getCreatedAt(),
-                tournament.getUpdatedAt()
+            tournament.getId(),
+            new BoardGameSummary(boardGame.getId(), boardGame.getName()),
+            tournament.getName(),
+            tournament.getStatus(),
+            tournament.getMaxPlayers(),
+            tournament.getStartsOn(),
+            tournament.getEndsOn(),
+            tournament.getCreatedAt(),
+            tournament.getUpdatedAt()
         );
     }
 

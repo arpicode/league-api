@@ -7,7 +7,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * A full-context test, driving the HTTP API through {@link org.springframework.test.web.servlet.MockMvc}
@@ -26,11 +31,11 @@ import java.lang.annotation.*;
 @Inherited
 @SpringBootTest
 @Import({
-        TestcontainersConfiguration.class,
-        ThrowingEndpointConfiguration.class,
-        PlayerFixtures.class,
-        BoardGameFixtures.class,
-        TournamentFixtures.class
+    TestcontainersConfiguration.class,
+    ThrowingEndpointConfiguration.class,
+    PlayerFixtures.class,
+    BoardGameFixtures.class,
+    TournamentFixtures.class
 })
 @AutoConfigureMockMvc
 public @interface ApiIntegrationTest {

@@ -4,8 +4,8 @@ import jakarta.validation.constraints.NotNull;
 
 public record TournamentRegistrationCreateRequest(
 
-        @NotNull(message = "Player must be set")
-        Long playerId
+    @NotNull(message = "Player must be set")
+    Long playerId
 
 ) {
 }

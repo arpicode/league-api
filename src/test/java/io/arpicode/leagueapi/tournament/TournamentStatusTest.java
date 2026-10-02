@@ -27,50 +27,50 @@ class TournamentStatusTest {
 
     static Stream<Arguments> terminalStatuses() {
         return Stream.of(
-                Arguments.of(TournamentStatus.DRAFT, false),
-                Arguments.of(TournamentStatus.OPEN, false),
-                Arguments.of(TournamentStatus.IN_PROGRESS, false),
-                Arguments.of(TournamentStatus.CLOSED, true),
-                Arguments.of(TournamentStatus.CANCELLED, true)
+            Arguments.of(TournamentStatus.DRAFT, false),
+            Arguments.of(TournamentStatus.OPEN, false),
+            Arguments.of(TournamentStatus.IN_PROGRESS, false),
+            Arguments.of(TournamentStatus.CLOSED, true),
+            Arguments.of(TournamentStatus.CANCELLED, true)
         );
     }
 
     static Stream<Arguments> transitions() {
         return Stream.of(
-                // DRAFT
-                Arguments.of(TournamentStatus.DRAFT, TournamentStatus.DRAFT, true),
-                Arguments.of(TournamentStatus.DRAFT, TournamentStatus.OPEN, true),
-                Arguments.of(TournamentStatus.DRAFT, TournamentStatus.CANCELLED, true),
-                Arguments.of(TournamentStatus.DRAFT, TournamentStatus.IN_PROGRESS, false),
-                Arguments.of(TournamentStatus.DRAFT, TournamentStatus.CLOSED, false),
+            // DRAFT
+            Arguments.of(TournamentStatus.DRAFT, TournamentStatus.DRAFT, true),
+            Arguments.of(TournamentStatus.DRAFT, TournamentStatus.OPEN, true),
+            Arguments.of(TournamentStatus.DRAFT, TournamentStatus.CANCELLED, true),
+            Arguments.of(TournamentStatus.DRAFT, TournamentStatus.IN_PROGRESS, false),
+            Arguments.of(TournamentStatus.DRAFT, TournamentStatus.CLOSED, false),
 
-                // OPEN
-                Arguments.of(TournamentStatus.OPEN, TournamentStatus.OPEN, true),
-                Arguments.of(TournamentStatus.OPEN, TournamentStatus.DRAFT, false),
-                Arguments.of(TournamentStatus.OPEN, TournamentStatus.CANCELLED, true),
-                Arguments.of(TournamentStatus.OPEN, TournamentStatus.IN_PROGRESS, true),
-                Arguments.of(TournamentStatus.OPEN, TournamentStatus.CLOSED, false),
+            // OPEN
+            Arguments.of(TournamentStatus.OPEN, TournamentStatus.OPEN, true),
+            Arguments.of(TournamentStatus.OPEN, TournamentStatus.DRAFT, false),
+            Arguments.of(TournamentStatus.OPEN, TournamentStatus.CANCELLED, true),
+            Arguments.of(TournamentStatus.OPEN, TournamentStatus.IN_PROGRESS, true),
+            Arguments.of(TournamentStatus.OPEN, TournamentStatus.CLOSED, false),
 
-                // IN_PROGRESS
-                Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.IN_PROGRESS, true),
-                Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.CLOSED, true),
-                Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.DRAFT, false),
-                Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.OPEN, false),
-                Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.CANCELLED, false),
+            // IN_PROGRESS
+            Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.IN_PROGRESS, true),
+            Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.CLOSED, true),
+            Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.DRAFT, false),
+            Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.OPEN, false),
+            Arguments.of(TournamentStatus.IN_PROGRESS, TournamentStatus.CANCELLED, false),
 
-                // CLOSED (terminal)
-                Arguments.of(TournamentStatus.CLOSED, TournamentStatus.CLOSED, true),
-                Arguments.of(TournamentStatus.CLOSED, TournamentStatus.DRAFT, false),
-                Arguments.of(TournamentStatus.CLOSED, TournamentStatus.OPEN, false),
-                Arguments.of(TournamentStatus.CLOSED, TournamentStatus.IN_PROGRESS, false),
-                Arguments.of(TournamentStatus.CLOSED, TournamentStatus.CANCELLED, false),
+            // CLOSED (terminal)
+            Arguments.of(TournamentStatus.CLOSED, TournamentStatus.CLOSED, true),
+            Arguments.of(TournamentStatus.CLOSED, TournamentStatus.DRAFT, false),
+            Arguments.of(TournamentStatus.CLOSED, TournamentStatus.OPEN, false),
+            Arguments.of(TournamentStatus.CLOSED, TournamentStatus.IN_PROGRESS, false),
+            Arguments.of(TournamentStatus.CLOSED, TournamentStatus.CANCELLED, false),
 
-                // CANCELLED (terminal)
-                Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.CANCELLED, true),
-                Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.DRAFT, false),
-                Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.OPEN, false),
-                Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.IN_PROGRESS, false),
-                Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.CLOSED, false)
+            // CANCELLED (terminal)
+            Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.CANCELLED, true),
+            Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.DRAFT, false),
+            Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.OPEN, false),
+            Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.IN_PROGRESS, false),
+            Arguments.of(TournamentStatus.CANCELLED, TournamentStatus.CLOSED, false)
         );
     }
 }

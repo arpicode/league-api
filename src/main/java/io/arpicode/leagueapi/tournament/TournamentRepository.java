@@ -29,10 +29,10 @@ public interface TournamentRepository extends JpaRepository<Tournament, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-            SELECT tournament
-            FROM Tournament tournament
-            WHERE tournament.id = :id
-            """)
+        SELECT tournament
+        FROM Tournament tournament
+        WHERE tournament.id = :id
+        """)
     Optional<Tournament> findByIdForUpdate(@Param("id") Long id);
 
 }

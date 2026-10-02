@@ -36,12 +36,12 @@ public class PlayerFixtures {
 
     public long create(String username, String email) throws Exception {
         MockHttpServletResponse response = mockMvc.perform(post("/api/v1/players")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"%s", "email":"%s"}
-                                """.formatted(username, email)))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse();
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"username":"%s", "email":"%s"}
+                    """.formatted(username, email)))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse();
 
         return ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
     }

@@ -26,8 +26,8 @@ class GlobalExceptionHandlerTest {
         // Narrowing the walk to the immediate cause degrades this to a generic 409, which is the
         // regression an extra wrapper (a commit-time RollbackException) would cause in production.
         DataIntegrityViolationException ex = new DataIntegrityViolationException(
-                "could not execute statement",
-                new IllegalStateException("commit failed", constraintViolation("uq_player_username_normalized")));
+            "could not execute statement",
+            new IllegalStateException("commit failed", constraintViolation("uq_player_username_normalized")));
 
         ProblemDetail problem = handler.handleDataIntegrity(ex);
 
@@ -42,7 +42,7 @@ class GlobalExceptionHandlerTest {
         // A constraint added to the schema but not to CONSTRAINT_MAPPINGS must still reach the
         // client as a 409 carrying the contract, not leak the constraint name or become a 500.
         DataIntegrityViolationException ex = new DataIntegrityViolationException(
-                "could not execute statement", constraintViolation("uq_some_future_constraint"));
+            "could not execute statement", constraintViolation("uq_some_future_constraint"));
 
         ProblemDetail problem = handler.handleDataIntegrity(ex);
 
@@ -57,7 +57,7 @@ class GlobalExceptionHandlerTest {
         // Dropping the null guard on the violation turns this into an NPE, which the catch-all
         // handler would then answer with a 500 instead of the 409 the client expects.
         DataIntegrityViolationException ex =
-                new DataIntegrityViolationException("could not execute statement");
+            new DataIntegrityViolationException("could not execute statement");
 
         ProblemDetail problem = handler.handleDataIntegrity(ex);
 
@@ -72,7 +72,7 @@ class GlobalExceptionHandlerTest {
         // its own handler this falls to the catch-all and the client is told 500 INTERNAL_ERROR
         // for a request it could simply retry.
         ProblemDetail problem = handler.handleOptimisticLock(
-                new OptimisticLockingFailureException("Row was updated or deleted by another transaction"));
+            new OptimisticLockingFailureException("Row was updated or deleted by another transaction"));
 
         assertThat(problem.getProperties()).containsEntry("code", ErrorCode.CONCURRENT_MODIFICATION.name());
         assertThat(problem.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
@@ -81,9 +81,9 @@ class GlobalExceptionHandlerTest {
 
     private static ConstraintViolationException constraintViolation(String constraintName) {
         return new ConstraintViolationException(
-                "duplicate key value violates unique constraint",
-                new SQLException("duplicate key", "23505"),
-                constraintName);
+            "duplicate key value violates unique constraint",
+            new SQLException("duplicate key", "23505"),
+            constraintName);
     }
 
 }
