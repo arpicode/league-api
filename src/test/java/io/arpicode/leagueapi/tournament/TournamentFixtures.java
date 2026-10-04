@@ -62,7 +62,7 @@ public class TournamentFixtures {
     }
 
     public long createDraft() throws Exception {
-        return createThrough(DEFAULT_MAX_PLAYERS, NO_PLAYERS);
+        return createThrough(boardGames.create(), DEFAULT_MAX_PLAYERS, null, null, NO_PLAYERS);
     }
 
     public long createOpen() throws Exception {
@@ -70,13 +70,20 @@ public class TournamentFixtures {
     }
 
     public long createOpen(Integer maxPlayers) throws Exception {
-        return createThrough(maxPlayers, NO_PLAYERS, TournamentStatus.OPEN);
+        return createThrough(boardGames.create(), maxPlayers, null, null, NO_PLAYERS, TournamentStatus.OPEN);
     }
 
     // The players register before the tournament starts, so they are its confirmed roster. Past
     // DEFAULT_MAX_PLAYERS the extra ones would be waitlisted, and starting deletes the waitlist.
     public long createInProgress(long... playerIds) throws Exception {
-        return createThrough(DEFAULT_MAX_PLAYERS, playerIds, TournamentStatus.OPEN, TournamentStatus.IN_PROGRESS);
+        return createInProgress(boardGames.create(), null, null, playerIds);
+    }
+
+    // For a test about the game's player range or the tournament's dates, which the overload above
+    // leaves to a 1-4 player game and no dates.
+    public long createInProgress(long boardGameId, LocalDate startsOn, LocalDate endsOn, long... playerIds) throws Exception {
+        return createThrough(boardGameId, DEFAULT_MAX_PLAYERS, startsOn, endsOn, playerIds,
+            TournamentStatus.OPEN, TournamentStatus.IN_PROGRESS);
     }
 
     // Fills a tournament through the registration endpoint, one new player per registration.
@@ -110,13 +117,13 @@ public class TournamentFixtures {
     // Walks the state machine one legal step at a time, as a client has to: there is no way to
     // create a tournament directly in a later status. The players register once the walk reaches
     // OPEN, the only status that takes registrations.
-    private long createThrough(Integer maxPlayers, long[] playerIds, TournamentStatus... path) throws Exception {
-        long boardGameId = boardGames.create();
+    private long createThrough(long boardGameId, Integer maxPlayers, LocalDate startsOn, LocalDate endsOn,
+                               long[] playerIds, TournamentStatus... path) throws Exception {
         String name = "fixture_tournament_" + sequence.incrementAndGet();
-        long id = create(boardGameId, name, maxPlayers, null, null);
+        long id = create(boardGameId, name, maxPlayers, startsOn, endsOn);
 
         for (TournamentStatus status : path) {
-            transition(id, boardGameId, name, maxPlayers, status);
+            transition(id, boardGameId, name, maxPlayers, startsOn, endsOn, status);
             if (status == TournamentStatus.OPEN) {
                 for (long playerId : playerIds) {
                     register(id, playerId);
@@ -139,12 +146,13 @@ public class TournamentFixtures {
     // PUT replaces the whole tournament, so a transition resends every field the tournament was
     // created with. Leaving one out clears it: a dropped maxPlayers would silently turn a capacity
     // test's tournament into an unlimited one.
-    private void transition(long id, long boardGameId, String name, Integer maxPlayers, TournamentStatus status) throws Exception {
+    private void transition(long id, long boardGameId, String name, Integer maxPlayers,
+                            LocalDate startsOn, LocalDate endsOn, TournamentStatus status) throws Exception {
         mockMvc.perform(put("/api/v1/tournaments/{id}", id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d}
-                    """.formatted(boardGameId, name, status, maxPlayers)))
+                    {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d, "startsOn":%s, "endsOn":%s}
+                    """.formatted(boardGameId, name, status, maxPlayers, quotedOrNull(startsOn), quotedOrNull(endsOn))))
             .andExpect(status().isOk());
     }
 
