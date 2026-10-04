@@ -21,6 +21,7 @@ public final class UserMessages {
     public static final String TOURNAMENT_LOCKED = "Tournament can't be modified once status is %s";
     public static final String TOURNAMENT_NOT_DELETABLE = "Tournament can't be deleted once status is %s, cancel it instead";
     public static final String TOURNAMENT_MAX_PLAYERS_BELOW_CONFIRMED = "Maximum players can't be lower than the %d players already confirmed";
+    public static final String TOURNAMENT_DATES_EXCLUDE_GAME_MATCHES = "Tournament dates must cover its game matches, scheduled from %s to %s";
 
     public static final String TOURNAMENT_NOT_OPEN = "Tournament status must be OPEN to register. Current status is %s";
     public static final String TOURNAMENT_NOT_OPEN_FOR_WITHDRAWAL = "Tournament status must be OPEN to withdraw. Current status is %s";
@@ -30,6 +31,9 @@ public final class UserMessages {
     public static final String TOURNAMENT_REGISTRATION_NOT_FOUND = "Player of id %d is not registered for tournament of id %d";
 
     public static final String GAME_MATCH_ILLEGAL_TRANSITION = "Game match status can't transition from %s to %s";
+    public static final String GAME_MATCH_PLAYERS_NOT_REGISTERED = "Players of id %s are not registered for tournament of id %d";
+    public static final String GAME_MATCH_PLAYER_COUNT_OUT_OF_RANGE = "A game match of %s takes %d to %d players, got %d";
+    public static final String GAME_MATCH_OUTSIDE_TOURNAMENT_DATES = "Game match can't be scheduled on %s, outside the tournament dates";
 
     public static final String CONFLICT = "The request conflicts with an existing resource.";
     public static final String CONCURRENT_MODIFICATION = "The resource was modified by another request. Retry with its current state.";
