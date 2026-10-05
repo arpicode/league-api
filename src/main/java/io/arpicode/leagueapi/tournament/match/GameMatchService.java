@@ -1,7 +1,5 @@
 package io.arpicode.leagueapi.tournament.match;
 
-import io.arpicode.leagueapi.boardgame.BoardGame;
-import io.arpicode.leagueapi.boardgame.dto.BoardGameSummary;
 import io.arpicode.leagueapi.player.Player;
 import io.arpicode.leagueapi.player.dto.PlayerSummary;
 import io.arpicode.leagueapi.shared.clock.LeagueTime;
@@ -10,7 +8,6 @@ import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import io.arpicode.leagueapi.tournament.Tournament;
 import io.arpicode.leagueapi.tournament.TournamentRepository;
-import io.arpicode.leagueapi.tournament.dto.TournamentSummary;
 import io.arpicode.leagueapi.tournament.match.dto.GameMatchCreateRequest;
 import io.arpicode.leagueapi.tournament.match.dto.GameMatchResponse;
 import io.arpicode.leagueapi.tournament.match.dto.MatchParticipantResponse;
@@ -45,8 +42,8 @@ public class GameMatchService {
     // The tournament lock keeps every check below true until the insert: the status, the dates and
     // the roster can only change through requests that take the same lock.
     @Transactional
-    public GameMatchResponse create(GameMatchCreateRequest gameMatchCreateRequest) {
-        Tournament tournament = findTournamentForUpdate(gameMatchCreateRequest.tournamentId());
+    public GameMatchResponse create(long tournamentId, GameMatchCreateRequest gameMatchCreateRequest) {
+        Tournament tournament = findTournamentForUpdate(tournamentId);
 
         // First, so a tournament that isn't running says so, rather than failing on a consequence
         // of it: a draft has no roster, so its players would be reported as unregistered.
@@ -69,6 +66,14 @@ public class GameMatchService {
         GameMatch saved = gameMatchRepository.saveAndFlush(gameMatch);
 
         return toGameMatchResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public GameMatchResponse getById(long tournamentId, long id) {
+        GameMatch gameMatch = gameMatchRepository.findByIdAndTournamentId(id, tournamentId)
+            .orElseThrow(() -> gameMatchNotFound(tournamentId, id));
+
+        return toGameMatchResponse(gameMatch);
     }
 
     // For a tournament whose dates are changing. The caller must hold the tournament lock, as
@@ -115,24 +120,25 @@ public class GameMatchService {
         return playerIds.stream().map(registered::get).toList();
     }
 
-    private GameMatchResponse toGameMatchResponse(GameMatch gameMatch) {
-        Tournament tournament = gameMatch.getTournament();
-        BoardGame boardGame = tournament.getBoardGame();
+    // The tournament is the parent resource in the URL, so a missing one is reported as such rather
+    // than as a missing match, as for registrations. It is only looked up on this path.
+    private BusinessException gameMatchNotFound(long tournamentId, long id) {
+        if (!tournamentRepository.existsById(tournamentId)) {
+            return new BusinessException(
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
+            );
+        }
+        return new BusinessException(
+            ErrorCode.GAME_MATCH_NOT_FOUND,
+            UserMessages.GAME_MATCH_NOT_FOUND.formatted(id, tournamentId)
+        );
+    }
 
+    private GameMatchResponse toGameMatchResponse(GameMatch gameMatch) {
         return new GameMatchResponse(
             gameMatch.getId(),
-            new TournamentSummary(
-                tournament.getId(),
-                new BoardGameSummary(
-                    boardGame.getId(),
-                    boardGame.getName()
-                ),
-                tournament.getName(),
-                tournament.getStatus(),
-                tournament.getMaxPlayers(),
-                tournament.getStartsOn(),
-                tournament.getEndsOn()
-            ),
+            gameMatch.getTournament().getId(),
             gameMatch.getStatus(),
             gameMatch.getRoundNumber(),
             gameMatch.getScheduledAt(),

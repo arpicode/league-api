@@ -24,12 +24,18 @@ public class GameMatchFixtures {
         this.mockMvc = mockMvc;
     }
 
+    public long create(long tournamentId, long... playerIds) throws Exception {
+        return create(tournamentId, null, playerIds);
+    }
+
     public long create(long tournamentId, OffsetDateTime scheduledAt, long... playerIds) throws Exception {
-        MockHttpServletResponse response = mockMvc.perform(post("/api/v1/gamematches")
+        MockHttpServletResponse response = mockMvc.perform(post("/api/v1/tournaments/{id}/matches", tournamentId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"tournamentId":%d, "scheduledAt":"%s", "playerIds":%s}
-                    """.formatted(tournamentId, scheduledAt, Arrays.toString(playerIds))))
+                    {"scheduledAt":%s, "playerIds":%s}
+                    """.formatted(
+                    scheduledAt == null ? "null" : "\"" + scheduledAt + "\"",
+                    Arrays.toString(playerIds))))
             .andExpect(status().isCreated())
             .andReturn().getResponse();
 

@@ -1,5 +1,6 @@
 package io.arpicode.leagueapi.tournament.match;
 
+import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.ApiIntegrationTest;
 import io.arpicode.leagueapi.boardgame.BoardGameFixtures;
 import io.arpicode.leagueapi.player.PlayerFixtures;
@@ -14,6 +15,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,6 +51,9 @@ class GameMatchControllerTest {
     @Autowired
     private TournamentFixtures tournaments;
 
+    @Autowired
+    private GameMatchFixtures gameMatches;
+
     // -- Create
 
     @Test
@@ -59,15 +66,23 @@ class GameMatchControllerTest {
 
         // Listed against registration order, so a seating taken from the roster lookup's order would
         // show here. The third registered player is left out and must not be seated.
-        postGameMatch(tournamentId, null, secondRegisteredId, firstRegisteredId)
+        MockHttpServletResponse response = postGameMatch(tournamentId, null, secondRegisteredId, firstRegisteredId)
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.tournamentId").value(tournamentId))
             .andExpect(jsonPath("$.status").value(GameMatchStatus.SCHEDULED.name()))
             .andExpect(jsonPath("$.participants.length()").value(2))
             .andExpect(jsonPath("$.participants[0].seatNumber").value(1))
             .andExpect(jsonPath("$.participants[0].player.id").value(secondRegisteredId))
             .andExpect(jsonPath("$.participants[0].player.username").value("test_player_username"))
             .andExpect(jsonPath("$.participants[1].seatNumber").value(2))
-            .andExpect(jsonPath("$.participants[1].player.id").value(firstRegisteredId));
+            .andExpect(jsonPath("$.participants[1].player.id").value(firstRegisteredId))
+            .andReturn().getResponse();
+
+        long id = ((Number) JsonPath.read(response.getContentAsString(), "$.id")).longValue();
+
+        assertThat(response.getHeader("Location"))
+            .as("Location of the created game match")
+            .isEqualTo("http://localhost/api/v1/tournaments/%d/matches/%d".formatted(tournamentId, id));
     }
 
     @Test
@@ -180,15 +195,60 @@ class GameMatchControllerTest {
             .andExpect(jsonPath("$.scheduledAt").value("2026-10-10T18:00:00Z"));
     }
 
+    // -- Get
+
+    @Test
+    @DisplayName("should get a game match of the tournament with its participants")
+    void getGameMatch() throws Exception {
+        long playerId = players.create();
+        long tournamentId = tournaments.createInProgress(playerId);
+        long id = gameMatches.create(tournamentId, playerId);
+
+        getGameMatch(tournamentId, id)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.participants[0].player.id").value(playerId));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when the game match belongs to another tournament")
+    void getGameMatchFromAnotherTournament() throws Exception {
+        long playerId = players.create();
+        long id = gameMatches.create(tournaments.createInProgress(playerId), playerId);
+        long otherTournamentId = tournaments.createInProgress();
+
+        // The id exists, only not under this tournament: a lookup by id alone would find it.
+        getGameMatch(otherTournamentId, id)
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.GAME_MATCH_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.GAME_MATCH_NOT_FOUND.formatted(id, otherTournamentId)));
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when getting a game match for a tournament that does not exist")
+    void getGameMatchTournamentNotFound() throws Exception {
+        // A real match id, so the only thing missing is the tournament.
+        long playerId = players.create();
+        long id = gameMatches.create(tournaments.createInProgress(playerId), playerId);
+
+        getGameMatch(Long.MAX_VALUE, id)
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+    }
+
     private ResultActions postGameMatch(long tournamentId, String scheduledAt, long... playerIds) throws Exception {
-        return mockMvc.perform(post("/api/v1/gamematches")
+        return mockMvc.perform(post("/api/v1/tournaments/{id}/matches", tournamentId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"tournamentId":%d, "scheduledAt":%s, "playerIds":%s}
+                {"scheduledAt":%s, "playerIds":%s}
                 """.formatted(
-                tournamentId,
                 scheduledAt == null ? "null" : "\"" + scheduledAt + "\"",
                 Arrays.toString(playerIds))));
+    }
+
+    private ResultActions getGameMatch(long tournamentId, long id) throws Exception {
+        return mockMvc.perform(get("/api/v1/tournaments/{id}/matches/{matchId}", tournamentId, id));
     }
 
     private long[] newPlayers(int count) throws Exception {

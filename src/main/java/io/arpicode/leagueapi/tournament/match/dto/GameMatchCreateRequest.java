@@ -15,9 +15,6 @@ import java.util.List;
  */
 public record GameMatchCreateRequest(
 
-    @NotNull(message = "Tournament must be set")
-    Long tournamentId,
-
     @Positive(message = "Round number must be at least 1")
     Short roundNumber,
 

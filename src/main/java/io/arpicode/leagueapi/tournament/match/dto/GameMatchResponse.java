@@ -1,6 +1,5 @@
 package io.arpicode.leagueapi.tournament.match.dto;
 
-import io.arpicode.leagueapi.tournament.dto.TournamentSummary;
 import io.arpicode.leagueapi.tournament.match.GameMatchStatus;
 
 import java.time.OffsetDateTime;
@@ -11,7 +10,7 @@ import java.util.List;
  */
 public record GameMatchResponse(
     Long id,
-    TournamentSummary tournament,
+    Long tournamentId,
     GameMatchStatus status,
     Short roundNumber,
     OffsetDateTime scheduledAt,

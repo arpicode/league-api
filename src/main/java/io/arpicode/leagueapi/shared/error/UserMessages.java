@@ -30,6 +30,7 @@ public final class UserMessages {
     public static final String TOURNAMENT_REGISTRATION_ALREADY_EXISTS = "Tournament registration already exists";
     public static final String TOURNAMENT_REGISTRATION_NOT_FOUND = "Player of id %d is not registered for tournament of id %d";
 
+    public static final String GAME_MATCH_NOT_FOUND = "Game match of id %d not found in tournament of id %d";
     public static final String GAME_MATCH_ILLEGAL_TRANSITION = "Game match status can't transition from %s to %s";
     public static final String GAME_MATCH_PLAYERS_NOT_REGISTERED = "Players of id %s are not registered for tournament of id %d";
     public static final String GAME_MATCH_PLAYER_COUNT_OUT_OF_RANGE = "A game match of %s takes %d to %d players, got %d";
