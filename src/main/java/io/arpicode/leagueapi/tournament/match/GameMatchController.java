@@ -1,7 +1,7 @@
-package io.arpicode.leagueapi.gamematch;
+package io.arpicode.leagueapi.tournament.match;
 
-import io.arpicode.leagueapi.gamematch.dto.GameMatchCreateRequest;
-import io.arpicode.leagueapi.gamematch.dto.GameMatchResponse;
+import io.arpicode.leagueapi.tournament.match.dto.GameMatchCreateRequest;
+import io.arpicode.leagueapi.tournament.match.dto.GameMatchResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

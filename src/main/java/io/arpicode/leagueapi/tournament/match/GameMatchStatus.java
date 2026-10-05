@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.gamematch;
+package io.arpicode.leagueapi.tournament.match;
 
 public enum GameMatchStatus {
     SCHEDULED,

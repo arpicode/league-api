@@ -1,9 +1,9 @@
 package io.arpicode.leagueapi;
 
 import io.arpicode.leagueapi.boardgame.BoardGameFixtures;
-import io.arpicode.leagueapi.gamematch.GameMatchFixtures;
 import io.arpicode.leagueapi.player.PlayerFixtures;
 import io.arpicode.leagueapi.tournament.TournamentFixtures;
+import io.arpicode.leagueapi.tournament.match.GameMatchFixtures;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;

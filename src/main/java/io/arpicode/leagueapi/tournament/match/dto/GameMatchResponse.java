@@ -1,7 +1,7 @@
-package io.arpicode.leagueapi.gamematch.dto;
+package io.arpicode.leagueapi.tournament.match.dto;
 
-import io.arpicode.leagueapi.gamematch.GameMatchStatus;
 import io.arpicode.leagueapi.tournament.dto.TournamentSummary;
+import io.arpicode.leagueapi.tournament.match.GameMatchStatus;
 
 import java.time.OffsetDateTime;
 import java.util.List;

@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.gamematch;
+package io.arpicode.leagueapi.tournament.match;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;

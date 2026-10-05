@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.gamematch;
+package io.arpicode.leagueapi.tournament.match;
 
 import io.arpicode.leagueapi.boardgame.BoardGame;
 import io.arpicode.leagueapi.player.Player;

@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.gamematch;
+package io.arpicode.leagueapi.tournament.match;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +14,7 @@ public interface GameMatchRepository extends JpaRepository<GameMatch, Long> {
         SELECT min(gameMatch.scheduledAt) AS earliest, max(gameMatch.scheduledAt) AS latest
         FROM GameMatch gameMatch
         WHERE gameMatch.tournament.id = :tournamentId
-          AND gameMatch.status <> io.arpicode.leagueapi.gamematch.GameMatchStatus.CANCELLED
+          AND gameMatch.status <> io.arpicode.leagueapi.tournament.match.GameMatchStatus.CANCELLED
         """)
     ScheduleRange findScheduleRange(@Param("tournamentId") Long tournamentId);
 

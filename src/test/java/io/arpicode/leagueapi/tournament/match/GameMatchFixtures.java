@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.gamematch;
+package io.arpicode.leagueapi.tournament.match;
 
 import com.jayway.jsonpath.JsonPath;
 import org.springframework.boot.test.context.TestComponent;

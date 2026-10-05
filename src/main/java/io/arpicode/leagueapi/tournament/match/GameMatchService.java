@@ -1,10 +1,7 @@
-package io.arpicode.leagueapi.gamematch;
+package io.arpicode.leagueapi.tournament.match;
 
 import io.arpicode.leagueapi.boardgame.BoardGame;
 import io.arpicode.leagueapi.boardgame.dto.BoardGameSummary;
-import io.arpicode.leagueapi.gamematch.dto.GameMatchCreateRequest;
-import io.arpicode.leagueapi.gamematch.dto.GameMatchResponse;
-import io.arpicode.leagueapi.gamematch.dto.MatchParticipantResponse;
 import io.arpicode.leagueapi.player.Player;
 import io.arpicode.leagueapi.player.dto.PlayerSummary;
 import io.arpicode.leagueapi.shared.clock.LeagueTime;
@@ -16,6 +13,9 @@ import io.arpicode.leagueapi.tournament.TournamentRegistration;
 import io.arpicode.leagueapi.tournament.TournamentRegistrationRepository;
 import io.arpicode.leagueapi.tournament.TournamentRepository;
 import io.arpicode.leagueapi.tournament.dto.TournamentSummary;
+import io.arpicode.leagueapi.tournament.match.dto.GameMatchCreateRequest;
+import io.arpicode.leagueapi.tournament.match.dto.GameMatchResponse;
+import io.arpicode.leagueapi.tournament.match.dto.MatchParticipantResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
