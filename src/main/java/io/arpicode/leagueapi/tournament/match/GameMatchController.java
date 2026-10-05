@@ -3,6 +3,9 @@ package io.arpicode.leagueapi.tournament.match;
 import io.arpicode.leagueapi.tournament.match.dto.GameMatchCreateRequest;
 import io.arpicode.leagueapi.tournament.match.dto.GameMatchResponse;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,6 +43,15 @@ public class GameMatchController {
         return ResponseEntity
             .created(location)
             .body(saved);
+    }
+
+    // Schedule order by default, with unscheduled matches last, as Postgres sorts nulls in ascending
+    // order. The id ends the sort: without a unique last key, rows can repeat or go missing between pages.
+    @GetMapping("/{id}/matches")
+    public PagedModel<GameMatchResponse> list(
+        @PathVariable long id,
+        @PageableDefault(sort = {"scheduledAt", "id"}) Pageable pageable) {
+        return new PagedModel<>(gameMatchService.list(id, pageable));
     }
 
     @GetMapping("/{id}/matches/{matchId}")

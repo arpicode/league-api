@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -237,6 +238,78 @@ class GameMatchControllerTest {
             .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
     }
 
+    // -- List
+
+    @Test
+    @DisplayName("should list only the game matches of the targeted tournament")
+    void listGameMatchesForTargetedTournament() throws Exception {
+        long otherPlayerId = players.create();
+        gameMatches.create(tournaments.createInProgress(otherPlayerId), otherPlayerId);
+        long playerId = players.create();
+        long tournamentId = tournaments.createInProgress(playerId);
+        long id = gameMatches.create(tournamentId, playerId);
+
+        listGameMatches(tournamentId)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.page.totalElements").value(1))
+            .andExpect(jsonPath("$.content[0].id").value(id));
+    }
+
+    @Test
+    @DisplayName("should list a tournament's game matches by schedule, unscheduled ones last")
+    void listGameMatchesBySchedule() throws Exception {
+        long playerId = players.create();
+        long tournamentId = tournaments.createInProgress(playerId);
+        // Created against schedule order, so a list in creation order would show here.
+        long unscheduledId = gameMatches.create(tournamentId, playerId);
+        long laterId = gameMatches.create(tournamentId, OffsetDateTime.parse("2026-10-12T18:00:00Z"), playerId);
+        long earlierId = gameMatches.create(tournamentId, OffsetDateTime.parse("2026-10-11T18:00:00Z"), playerId);
+
+        listGameMatches(tournamentId)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].id").value(earlierId))
+            .andExpect(jsonPath("$.content[1].id").value(laterId))
+            .andExpect(jsonPath("$.content[2].id").value(unscheduledId));
+    }
+
+    @Test
+    @DisplayName("should list each game match with its own participants in seat order")
+    void listGameMatchesWithTheirParticipants() throws Exception {
+        long firstPlayerId = players.create();
+        long secondPlayerId = players.create();
+        long thirdPlayerId = players.create();
+        long tournamentId = tournaments.createInProgress(firstPlayerId, secondPlayerId, thirdPlayerId);
+        // Seated against id order, so participants sorted by player rather than by seat would show here.
+        gameMatches.create(tournamentId, secondPlayerId, firstPlayerId);
+        gameMatches.create(tournamentId, thirdPlayerId);
+
+        listGameMatches(tournamentId)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].participants.length()").value(2))
+            .andExpect(jsonPath("$.content[0].participants[0].player.id").value(secondPlayerId))
+            .andExpect(jsonPath("$.content[0].participants[1].player.id").value(firstPlayerId))
+            .andExpect(jsonPath("$.content[1].participants.length()").value(1))
+            .andExpect(jsonPath("$.content[1].participants[0].player.id").value(thirdPlayerId));
+    }
+
+    @Test
+    @DisplayName("should list no game matches for a tournament that has none")
+    void listGameMatchesWithoutGameMatches() throws Exception {
+        long tournamentId = tournaments.createInProgress();
+
+        listGameMatches(tournamentId)
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("should return 404 Not Found when listing the game matches of a tournament that does not exist")
+    void listGameMatchesTournamentNotFound() throws Exception {
+        listGameMatches(Long.MAX_VALUE)
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_NOT_FOUND.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_NOT_FOUND.formatted(Long.MAX_VALUE)));
+    }
+
     private ResultActions postGameMatch(long tournamentId, String scheduledAt, long... playerIds) throws Exception {
         return mockMvc.perform(post("/api/v1/tournaments/{id}/matches", tournamentId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -249,6 +322,10 @@ class GameMatchControllerTest {
 
     private ResultActions getGameMatch(long tournamentId, long id) throws Exception {
         return mockMvc.perform(get("/api/v1/tournaments/{id}/matches/{matchId}", tournamentId, id));
+    }
+
+    private ResultActions listGameMatches(long tournamentId) throws Exception {
+        return mockMvc.perform(get("/api/v1/tournaments/{id}/matches", tournamentId));
     }
 
     private long[] newPlayers(int count) throws Exception {

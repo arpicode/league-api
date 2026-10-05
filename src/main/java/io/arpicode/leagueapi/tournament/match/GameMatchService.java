@@ -13,7 +13,10 @@ import io.arpicode.leagueapi.tournament.match.dto.GameMatchResponse;
 import io.arpicode.leagueapi.tournament.match.dto.MatchParticipantResponse;
 import io.arpicode.leagueapi.tournament.registration.TournamentRegistration;
 import io.arpicode.leagueapi.tournament.registration.TournamentRegistrationRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -65,7 +68,7 @@ public class GameMatchService {
         );
         GameMatch saved = gameMatchRepository.saveAndFlush(gameMatch);
 
-        return toGameMatchResponse(saved);
+        return toGameMatchResponse(saved, saved.getParticipants());
     }
 
     @Transactional(readOnly = true)
@@ -73,7 +76,28 @@ public class GameMatchService {
         GameMatch gameMatch = gameMatchRepository.findByIdAndTournamentId(id, tournamentId)
             .orElseThrow(() -> gameMatchNotFound(tournamentId, id));
 
-        return toGameMatchResponse(gameMatch);
+        return toGameMatchResponse(gameMatch, gameMatch.getParticipants());
+    }
+
+    // Repeatable read keeps the page, its count and the participants on one snapshot.
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public Page<GameMatchResponse> list(long tournamentId, Pageable pageable) {
+        Page<GameMatch> gameMatches = gameMatchRepository.findByTournamentId(tournamentId, pageable);
+
+        // An empty page is either past the end of an existing tournament's matches or a missing tournament.
+        if (gameMatches.isEmpty() && !tournamentRepository.existsById(tournamentId)) {
+            throw new BusinessException(
+                ErrorCode.TOURNAMENT_NOT_FOUND,
+                UserMessages.TOURNAMENT_NOT_FOUND.formatted(tournamentId)
+            );
+        }
+
+        Map<Long, List<MatchParticipant>> participants = participantsByMatch(gameMatches.getContent());
+
+        return gameMatches.map(gameMatch -> toGameMatchResponse(
+            gameMatch,
+            participants.getOrDefault(gameMatch.getId(), List.of())
+        ));
     }
 
     // For a tournament whose dates are changing. The caller must hold the tournament lock, as
@@ -135,7 +159,20 @@ public class GameMatchService {
         );
     }
 
-    private GameMatchResponse toGameMatchResponse(GameMatch gameMatch) {
+    // Grouping keeps the query's seat order within each match.
+    private Map<Long, List<MatchParticipant>> participantsByMatch(List<GameMatch> gameMatches) {
+        if (gameMatches.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> gameMatchIds = gameMatches.stream().map(GameMatch::getId).toList();
+
+        return gameMatchRepository.findParticipants(gameMatchIds).stream()
+            .collect(Collectors.groupingBy(participant -> participant.getId().getGameMatchId()));
+    }
+
+    // The participants come apart from the match, since a page loads them in a query of their own.
+    private GameMatchResponse toGameMatchResponse(GameMatch gameMatch, List<MatchParticipant> participants) {
         return new GameMatchResponse(
             gameMatch.getId(),
             gameMatch.getTournament().getId(),
@@ -144,7 +181,7 @@ public class GameMatchService {
             gameMatch.getScheduledAt(),
             gameMatch.getStartedAt(),
             gameMatch.getCompletedAt(),
-            gameMatch.getParticipants().stream()
+            participants.stream()
                 .map(participant -> new MatchParticipantResponse(
                     participant.getSeatNumber(),
                     new PlayerSummary(participant.getPlayer().getId(), participant.getPlayer().getUsername())
