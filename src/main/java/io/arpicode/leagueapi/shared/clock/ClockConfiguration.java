@@ -4,19 +4,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
-import java.time.ZoneId;
 
 
 @Configuration
 public class ClockConfiguration {
 
-    // The league's zone, and so the clock's: tournament dates are calendar days in it. Services read
-    // it back through Clock.getZone() rather than naming a zone themselves, so it is defined here only.
-    public static final ZoneId EUROPE_PARIS = ZoneId.of("Europe/Paris");
-
+    // Instants only, so UTC. The zone that turns an instant into a league day is LeagueTime.ZONE,
+    // never this clock's.
     @Bean
     public Clock clock() {
-        return Clock.system(EUROPE_PARIS);
+        return Clock.systemUTC();
     }
 
 }

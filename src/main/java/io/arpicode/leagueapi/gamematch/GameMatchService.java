@@ -7,6 +7,7 @@ import io.arpicode.leagueapi.gamematch.dto.GameMatchResponse;
 import io.arpicode.leagueapi.gamematch.dto.MatchParticipantResponse;
 import io.arpicode.leagueapi.player.Player;
 import io.arpicode.leagueapi.player.dto.PlayerSummary;
+import io.arpicode.leagueapi.shared.clock.LeagueTime;
 import io.arpicode.leagueapi.shared.error.BusinessException;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
@@ -18,7 +19,6 @@ import io.arpicode.leagueapi.tournament.dto.TournamentSummary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -28,18 +28,15 @@ import java.util.stream.Collectors;
 @Service
 public class GameMatchService {
 
-    private final Clock clock;
     private final GameMatchRepository gameMatchRepository;
     private final TournamentRepository tournamentRepository;
     private final TournamentRegistrationRepository tournamentRegistrationRepository;
 
     public GameMatchService(
-        Clock clock,
         GameMatchRepository gameMatchRepository,
         TournamentRepository tournamentRepository,
         TournamentRegistrationRepository tournamentRegistrationRepository
     ) {
-        this.clock = clock;
         this.gameMatchRepository = gameMatchRepository;
         this.tournamentRepository = tournamentRepository;
         this.tournamentRegistrationRepository = tournamentRegistrationRepository;
@@ -90,7 +87,7 @@ public class GameMatchService {
     // Tournament dates are calendar days in the league's zone, so a match's instant is converted to
     // that zone before it is compared with them: 23:30 UTC on the 10th is already the 11th in Paris.
     private LocalDate leagueDay(OffsetDateTime instant) {
-        return instant.atZoneSameInstant(clock.getZone()).toLocalDate();
+        return instant.atZoneSameInstant(LeagueTime.ZONE).toLocalDate();
     }
 
     // In the request's order, which is the seat order. Every registration left from IN_PROGRESS is
