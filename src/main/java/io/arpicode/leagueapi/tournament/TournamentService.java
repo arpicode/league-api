@@ -10,6 +10,7 @@ import io.arpicode.leagueapi.tournament.dto.TournamentCreateRequest;
 import io.arpicode.leagueapi.tournament.dto.TournamentResponse;
 import io.arpicode.leagueapi.tournament.dto.TournamentUpdateRequest;
 import io.arpicode.leagueapi.tournament.match.GameMatchService;
+import io.arpicode.leagueapi.tournament.registration.TournamentRegistrationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;

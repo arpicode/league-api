@@ -1,6 +1,7 @@
-package io.arpicode.leagueapi.tournament;
+package io.arpicode.leagueapi.tournament.registration;
 
 import io.arpicode.leagueapi.player.Player;
+import io.arpicode.leagueapi.tournament.Tournament;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;

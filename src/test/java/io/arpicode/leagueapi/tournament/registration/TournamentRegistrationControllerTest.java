@@ -1,10 +1,12 @@
-package io.arpicode.leagueapi.tournament;
+package io.arpicode.leagueapi.tournament.registration;
 
 import io.arpicode.leagueapi.ApiIntegrationTest;
 import io.arpicode.leagueapi.CommitsData;
 import io.arpicode.leagueapi.player.PlayerFixtures;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
+import io.arpicode.leagueapi.tournament.TournamentFixtures;
+import io.arpicode.leagueapi.tournament.TournamentStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

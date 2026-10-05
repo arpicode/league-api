@@ -9,13 +9,13 @@ import io.arpicode.leagueapi.shared.error.BusinessException;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import io.arpicode.leagueapi.tournament.Tournament;
-import io.arpicode.leagueapi.tournament.TournamentRegistration;
-import io.arpicode.leagueapi.tournament.TournamentRegistrationRepository;
 import io.arpicode.leagueapi.tournament.TournamentRepository;
 import io.arpicode.leagueapi.tournament.dto.TournamentSummary;
 import io.arpicode.leagueapi.tournament.match.dto.GameMatchCreateRequest;
 import io.arpicode.leagueapi.tournament.match.dto.GameMatchResponse;
 import io.arpicode.leagueapi.tournament.match.dto.MatchParticipantResponse;
+import io.arpicode.leagueapi.tournament.registration.TournamentRegistration;
+import io.arpicode.leagueapi.tournament.registration.TournamentRegistrationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -1,7 +1,7 @@
-package io.arpicode.leagueapi.tournament.dto;
+package io.arpicode.leagueapi.tournament.registration.dto;
 
 import io.arpicode.leagueapi.player.dto.PlayerSummary;
-import io.arpicode.leagueapi.tournament.TournamentRegistrationStatus;
+import io.arpicode.leagueapi.tournament.registration.TournamentRegistrationStatus;
 
 import java.time.OffsetDateTime;
 

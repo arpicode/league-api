@@ -1,7 +1,7 @@
-package io.arpicode.leagueapi.tournament;
+package io.arpicode.leagueapi.tournament.registration;
 
-import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationCreateRequest;
-import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationResponse;
+import io.arpicode.leagueapi.tournament.registration.dto.TournamentRegistrationCreateRequest;
+import io.arpicode.leagueapi.tournament.registration.dto.TournamentRegistrationResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;

@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.tournament;
+package io.arpicode.leagueapi.tournament.registration;
 
 public enum TournamentRegistrationStatus {
     CONFIRMED,

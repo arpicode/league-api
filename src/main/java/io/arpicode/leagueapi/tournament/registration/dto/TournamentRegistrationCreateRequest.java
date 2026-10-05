@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.tournament.dto;
+package io.arpicode.leagueapi.tournament.registration.dto;
 
 import jakarta.validation.constraints.NotNull;
 

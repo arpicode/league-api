@@ -1,4 +1,4 @@
-package io.arpicode.leagueapi.tournament;
+package io.arpicode.leagueapi.tournament.registration;
 
 import io.arpicode.leagueapi.player.Player;
 import io.arpicode.leagueapi.player.PlayerRepository;
@@ -6,8 +6,11 @@ import io.arpicode.leagueapi.player.dto.PlayerSummary;
 import io.arpicode.leagueapi.shared.error.BusinessException;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
-import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationCreateRequest;
-import io.arpicode.leagueapi.tournament.dto.TournamentRegistrationResponse;
+import io.arpicode.leagueapi.tournament.Tournament;
+import io.arpicode.leagueapi.tournament.TournamentRepository;
+import io.arpicode.leagueapi.tournament.TournamentStatus;
+import io.arpicode.leagueapi.tournament.registration.dto.TournamentRegistrationCreateRequest;
+import io.arpicode.leagueapi.tournament.registration.dto.TournamentRegistrationResponse;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
