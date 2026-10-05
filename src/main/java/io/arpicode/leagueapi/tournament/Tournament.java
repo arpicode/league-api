@@ -148,6 +148,35 @@ public class Tournament {
         }
     }
 
+    // A match takes place within the tournament. Pass the day the match is scheduled on in the
+    // league's zone, not the date of its instant in UTC: around midnight the two differ.
+    public void assertMatchDayWithinDates(@NonNull LocalDate matchDay) {
+        if (!covers(matchDay)) {
+            throw new BusinessException(
+                ErrorCode.GAME_MATCH_OUTSIDE_TOURNAMENT_DATES,
+                UserMessages.GAME_MATCH_OUTSIDE_TOURNAMENT_DATES.formatted(matchDay)
+            );
+        }
+    }
+
+    // The same rule from the other side: new dates must still cover the matches already scheduled.
+    // Checking the first and last match days covers every day between them.
+    public void assertDatesCoverMatchDays(@NonNull LocalDate earliestMatchDay, @NonNull LocalDate latestMatchDay) {
+        if (!covers(earliestMatchDay) || !covers(latestMatchDay)) {
+            throw new BusinessException(
+                ErrorCode.TOURNAMENT_DATES_EXCLUDE_GAME_MATCHES,
+                UserMessages.TOURNAMENT_DATES_EXCLUDE_GAME_MATCHES.formatted(earliestMatchDay, latestMatchDay)
+            );
+        }
+    }
+
+    // Both bounds are inclusive and either may be unset. Comparing days rather than instants keeps
+    // endsOn inclusive without computing the instant its day ends.
+    private boolean covers(LocalDate day) {
+        return (startsOn == null || !day.isBefore(startsOn))
+            && (endsOn == null || !day.isAfter(endsOn));
+    }
+
     // A tournament that has been played out or called off is a historical record: what the
     // league actually ran cannot be rewritten afterwards, so every editable field is frozen
     // together once the status is terminal. Re-sending the current values is not a change, so

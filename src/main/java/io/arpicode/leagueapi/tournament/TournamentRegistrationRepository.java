@@ -34,6 +34,11 @@ public interface TournamentRegistrationRepository extends JpaRepository<Tourname
 
     List<TournamentRegistration> findByTournamentIdAndStatus(Long tournamentId, TournamentRegistrationStatus status);
 
+    // A match's players in one query. Ids that are not registered in the tournament, whether or not
+    // the player exists, are simply absent. A match response embeds each PlayerSummary, hence the graph.
+    @EntityGraph(attributePaths = "player")
+    List<TournamentRegistration> findByTournamentIdAndPlayerIdIn(Long tournamentId, Collection<Long> playerIds);
+
     // A waitlisted registration's position is its rank in the order V009 defines: registered_at,
     // then player_id to break ties. Empty when the player is not on the tournament's waitlist.
     @Query(value = """
