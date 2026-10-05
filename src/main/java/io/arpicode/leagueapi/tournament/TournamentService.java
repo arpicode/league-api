@@ -3,6 +3,7 @@ package io.arpicode.leagueapi.tournament;
 import io.arpicode.leagueapi.boardgame.BoardGame;
 import io.arpicode.leagueapi.boardgame.BoardGameRepository;
 import io.arpicode.leagueapi.boardgame.dto.BoardGameSummary;
+import io.arpicode.leagueapi.gamematch.GameMatchService;
 import io.arpicode.leagueapi.shared.error.BusinessException;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Objects;
 
 @Service
@@ -22,15 +24,18 @@ public class TournamentService {
     private final TournamentRepository tournamentRepository;
     private final BoardGameRepository boardGameRepository;
     private final TournamentRegistrationService tournamentRegistrationService;
+    private final GameMatchService gameMatchService;
 
     public TournamentService(
         TournamentRepository tournamentRepository,
         BoardGameRepository boardGameRepository,
-        TournamentRegistrationService tournamentRegistrationService
+        TournamentRegistrationService tournamentRegistrationService,
+        GameMatchService gameMatchService
     ) {
         this.tournamentRepository = tournamentRepository;
         this.boardGameRepository = boardGameRepository;
         this.tournamentRegistrationService = tournamentRegistrationService;
+        this.gameMatchService = gameMatchService;
     }
 
     @Transactional
@@ -70,7 +75,8 @@ public class TournamentService {
     // Locked like a registration or a withdrawal, since both change the roster this method reads and
     // writes: a new maxPlayers is checked against it and filled from its waitlist, and leaving OPEN
     // deletes that waitlist. Without the lock, a registration could see OPEN and waitlist itself
-    // after the delete.
+    // after the delete. Match creation takes the same lock, so new dates are checked against every
+    // match that exists by the time they commit.
     @Transactional
     public TournamentResponse update(long id, TournamentUpdateRequest tournamentUpdateRequest) {
         Tournament tournament = tournamentRepository.findByIdForUpdate(id)
@@ -79,6 +85,8 @@ public class TournamentService {
                 UserMessages.TOURNAMENT_NOT_FOUND.formatted(id)));
         BoardGame boardGame = findBoardGame(tournamentUpdateRequest.boardGameId());
         Short previousMaxPlayers = tournament.getMaxPlayers();
+        LocalDate previousStartsOn = tournament.getStartsOn();
+        LocalDate previousEndsOn = tournament.getEndsOn();
         TournamentStatus previousStatus = tournament.getStatus();
 
         // Order matters: every field change is validated against the status the request arrived
@@ -93,6 +101,10 @@ public class TournamentService {
             tournamentUpdateRequest.endsOn());
         if (!Objects.equals(previousMaxPlayers, tournament.getMaxPlayers())) {
             tournamentRegistrationService.applyMaxPlayersChange(tournament);
+        }
+        if (!Objects.equals(previousStartsOn, tournament.getStartsOn())
+            || !Objects.equals(previousEndsOn, tournament.getEndsOn())) {
+            gameMatchService.assertMatchesWithinDates(tournament);
         }
         tournament.transitionTo(tournamentUpdateRequest.status());
 

@@ -1,6 +1,7 @@
 package io.arpicode.leagueapi;
 
 import io.arpicode.leagueapi.boardgame.BoardGameFixtures;
+import io.arpicode.leagueapi.gamematch.GameMatchFixtures;
 import io.arpicode.leagueapi.player.PlayerFixtures;
 import io.arpicode.leagueapi.tournament.TournamentFixtures;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,7 +36,8 @@ import java.lang.annotation.Target;
     ThrowingEndpointConfiguration.class,
     PlayerFixtures.class,
     BoardGameFixtures.class,
-    TournamentFixtures.class
+    TournamentFixtures.class,
+    GameMatchFixtures.class
 })
 @AutoConfigureMockMvc
 public @interface ApiIntegrationTest {

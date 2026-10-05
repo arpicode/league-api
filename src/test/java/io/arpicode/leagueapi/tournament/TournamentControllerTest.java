@@ -1,9 +1,12 @@
 package io.arpicode.leagueapi.tournament;
 
+import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import io.arpicode.leagueapi.ApiIntegrationTest;
 import io.arpicode.leagueapi.CommitsData;
 import io.arpicode.leagueapi.boardgame.BoardGameFixtures;
+import io.arpicode.leagueapi.gamematch.GameMatchFixtures;
+import io.arpicode.leagueapi.player.PlayerFixtures;
 import io.arpicode.leagueapi.shared.error.ErrorCode;
 import io.arpicode.leagueapi.shared.error.UserMessages;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +46,12 @@ class TournamentControllerTest {
 
     @Autowired
     TournamentFixtures tournaments;
+
+    @Autowired
+    PlayerFixtures players;
+
+    @Autowired
+    GameMatchFixtures gameMatches;
 
     @Test
     @DisplayName("should create a new tournament when valid data is provided")
@@ -681,6 +690,34 @@ class TournamentControllerTest {
             .andExpect(jsonPath("$.page.totalElements").value(4));
     }
 
+    @Test
+    @DisplayName("should return 409 Conflict when new dates would leave out the day of a scheduled game match")
+    void updateTournamentDatesExcludingGameMatch() throws Exception {
+        long playerId = players.create();
+        long id = tournaments.createInProgress(boardGames.create(), LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 10), playerId);
+        // 00:30 on the 9th in Paris, still the 8th in UTC: ending on the 8th leaves the match out.
+        gameMatches.create(id, OffsetDateTime.parse("2026-10-08T22:30:00Z"), playerId);
+
+        putTournamentDates(id, LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 8))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value(ErrorCode.TOURNAMENT_DATES_EXCLUDE_GAME_MATCHES.name()))
+            .andExpect(jsonPath("$.detail").value(UserMessages.TOURNAMENT_DATES_EXCLUDE_GAME_MATCHES
+                .formatted(LocalDate.of(2026, 10, 9), LocalDate.of(2026, 10, 9))));
+    }
+
+    @Test
+    @DisplayName("should allow moving the end date to the day of the last scheduled game match")
+    void updateTournamentDatesToLastGameMatchDay() throws Exception {
+        long playerId = players.create();
+        long id = tournaments.createInProgress(boardGames.create(), LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 10), playerId);
+        // 00:30 on the 9th in Paris: the end date may come down to the 9th, the match's day there.
+        gameMatches.create(id, OffsetDateTime.parse("2026-10-08T22:30:00Z"), playerId);
+
+        putTournamentDates(id, LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 9))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.endsOn").value("2026-10-09"));
+    }
+
     // -- Delete
 
     @Test
@@ -732,6 +769,26 @@ class TournamentControllerTest {
     }
 
     // -- Helpers
+
+    // PUT replaces the whole tournament, so every other field is resent as the tournament has it now,
+    // read back through GET so this works on a tournament a fixture named.
+    private ResultActions putTournamentDates(long id, LocalDate startsOn, LocalDate endsOn) throws Exception {
+        DocumentContext current = JsonPath.parse(mockMvc.perform(get("/api/v1/tournaments/{id}", id))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString());
+
+        return mockMvc.perform(put("/api/v1/tournaments/{id}", id)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"boardGameId":%d, "name":"%s", "status":"%s", "maxPlayers":%d, "startsOn":"%s", "endsOn":"%s"}
+                """.formatted(
+                ((Number) current.read("$.boardGame.id")).longValue(),
+                current.read("$.name"),
+                current.read("$.status"),
+                current.read("$.maxPlayers"),
+                startsOn,
+                endsOn)));
+    }
 
     private ResultActions putTournament(long id, long boardGameId, String name, TournamentStatus status) throws Exception {
         return mockMvc.perform(put("/api/v1/tournaments/{id}", id)
