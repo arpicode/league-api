@@ -77,7 +77,7 @@ curl localhost:8080/actuator/health
 - [x] 1.1 Project setup, Flyway, health endpoint
 - [x] 1.2 Players and board games (CRUD, validation, RFC 9457 errors)
 - [x] 1.3 Tournaments and registrations (state machine, capacity rules)
-- [ ] 1.4 Matches and results (optimistic locking)
+- [-] 1.4 Matches and results (optimistic locking)
 - [ ] 1.5 End-to-end scenario, documentation, `v0.1`
 
 **Palier 2 — asynchronous**
